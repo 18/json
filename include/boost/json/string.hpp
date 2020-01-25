@@ -1132,7 +1132,7 @@ public:
         copy from.
 
         @param count The number of characters to copy. 
-        The default argument for this parameter is `npos`
+        The default argument for this parameter is @ref npos.
 
         @throw std::out_of_range `pos >= s.size()`
 
@@ -1149,7 +1149,7 @@ public:
 
     //------------------------------------------------------
 
-    /** Access the storage associated with the container.
+    /** Return the storage associated with the container.
 
         Returns a pointer to the storage associated with the container
 
@@ -1174,7 +1174,7 @@ public:
     //
     //------------------------------------------------------
 
-    /** Access a character with bounds checking.
+    /** Return a character with bounds checking.
 
         Returns a reference to the character specified at
         location `pos`.
@@ -1187,7 +1187,7 @@ public:
 
         Strong guarantee.
 
-        @param pos A zero-based index to access
+        @param pos A zero-based index to access.
 
         @throw std::out_of_range `pos >= size()`
     */
@@ -1201,7 +1201,7 @@ public:
         return impl_.data()[pos];
     }
 
-    /** Access a character with bounds checking.
+    /** Return a character with bounds checking.
 
         Returns a reference to the character specified at
         location `pos`.
@@ -1228,7 +1228,7 @@ public:
         return impl_.data()[pos];
     }
 
-    /** Access a character without bounds checking.
+    /** Return a character without bounds checking.
 
         Returns a reference to the character specified at
         location `pos`.
@@ -1249,7 +1249,7 @@ public:
         return impl_.data()[pos];
     }
 
-   /**  Access a character without bounds checking.
+   /**  Return a character without bounds checking.
 
         Returns a reference to the character specified at
         location `pos`.
@@ -1270,7 +1270,7 @@ public:
         return impl_.data()[pos];
     }
 
-    /** Access the first character.
+    /** Return the first character.
 
         Returns a reference to the first character.
 
@@ -1288,7 +1288,7 @@ public:
         return impl_.data()[0];
     }
 
-    /** Access the first character.
+    /** Return the first character.
 
         Returns a reference to the first character.
 
@@ -1306,7 +1306,7 @@ public:
         return impl_.data()[0];
     }
 
-    /** Access the last character.
+    /** Return the last character.
 
         Returns a reference to the last character.
 
@@ -1324,7 +1324,7 @@ public:
         return impl_.data()[impl_.size() - 1];
     }
 
-    /** Access the last character.
+    /** Return the last character.
 
         Returns a reference to the last character.
 
@@ -1342,7 +1342,7 @@ public:
         return impl_.data()[impl_.size() - 1];
     }
 
-    /** Access the underlying character array directly.
+    /** Return the underlying character array directly.
 
         Returns a pointer to the underlying array
         serving as storage. The value returned is such that
@@ -1362,7 +1362,7 @@ public:
         return impl_.data();
     }
 
-    /** Access the underlying character array directly.
+    /** Return the underlying character array directly.
 
         Returns a pointer to the underlying array
         serving as storage. 
@@ -1383,7 +1383,7 @@ public:
         return impl_.data();
     }
 
-    /** Access the underlying character array directly.
+    /** Return the underlying character array directly.
 
         Returns a pointer to the underlying array
         serving as storage. The value returned is such that
@@ -1424,7 +1424,7 @@ public:
     //
     //------------------------------------------------------
 
-    /** Return an iterator to the first character.
+    /** Return an iterator referring to the first character.
 
         If the container is empty, the returned iterator
         will be equal to @ref end().
@@ -1439,7 +1439,7 @@ public:
         return impl_.data();
     }
 
-    /** Return an iterator to the first character.
+    /** Return an iterator referring to the first character.
 
         If the container is empty, the returned iterator
         will be equal to @ref end().
@@ -1454,7 +1454,7 @@ public:
         return impl_.data();
     }
 
-    /** Return an iterator to the first character.
+    /** Return an iterator referring to the first character.
 
         If the container is empty, the returned iterator
         will be equal to @ref end().
@@ -1469,7 +1469,7 @@ public:
         return impl_.data();
     }
 
-    /** Return an iterator to the character following the last character.
+    /** Return an iterator referring to the character following the last character.
 
         The character acts as a placeholder; attempting to
         access it results in undefined behavior.
@@ -1484,7 +1484,7 @@ public:
         return impl_.end();
     }
 
-    /** Return an iterator to the character following the last character.
+    /** Return an iterator referring to the character following the last character.
 
         The character acts as a placeholder; attempting to
         access it results in undefined behavior.
@@ -1499,7 +1499,7 @@ public:
         return impl_.end();
     }
 
-    /** Return an iterator to the character following the last character.
+    /** Return an iterator referring to the character following the last character.
 
         The character acts as a placeholder; attempting to
         access it results in undefined behavior.
@@ -1917,7 +1917,7 @@ public:
         @param s The string from which to insert.
         @param pos_str The index in `s` to start inserting from.
         @param count The number of characters to insert. 
-        The default argument for this parameter is `npos`.
+        The default argument for this parameter is @ref npos.
 
         @throw std::length_error `size() + str.substr(pos_str, count).size() > max_size()`
         @throw std::out_of_range `pos > size()`
@@ -2167,7 +2167,7 @@ public:
     /** Erase characters from the string.
         
         Erases `num` characters from the string, starting at `pos`.
-        `num` is determined as the the smaller of `count` and `size() - pos`.
+        `num` is determined as the smaller of `count` and `size() - pos`.
 
         @par Exception Safety
 
@@ -2182,7 +2182,7 @@ public:
         @param pos The index to erase at.
         The default argument for this parameter is `0`.
         @param count The number of characters to erase.
-        The default argument for this parameter is `npos`.
+        The default argument for this parameter is @ref npos.
         
         @throw std::out_of_range `pos > size()`
     */
@@ -2332,7 +2332,7 @@ public:
         @param s The string to append.
         @param pos The position from which to begin the substring.
         @param count The number of characters to append.
-        The default argument for this parameter is `npos`.
+        The default argument for this parameter is @ref npos.
 
         @throw std::length_error `size() + s.substr(pos, count).size() > max_size()`
         @throw std::out_of_range `pos > s.size()`
@@ -2502,7 +2502,7 @@ public:
         @param t The object to append.
         @param pos The index to begin the substring from.
         @param count The number of characters to append.
-        The default argument for this parameter is `npos`.
+        The default argument for this parameter is @ref npos.
 
         @throw std::length_error `size() + sv.size() > max_size()`
         @throw std::out_of_range `pos > sv.size()`
