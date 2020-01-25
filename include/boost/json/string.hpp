@@ -1,5 +1,6 @@
 //
 // Copyright (c) 2019 Vinnie Falco (vinnie.falco@gmail.com)
+// Copyright (c) 2020 Krystian Stasiowski (sdkrystian@gmail.com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -147,15 +148,15 @@ public:
         using pilfer semantics.
         Ownership of the @ref storage is transferred.
 
+        @par Complexity
+
+        Constant.
+        
         @note
 
         After construction, the pilfered-from string may
         only be destroyed.
         
-        @par Complexity
-
-        Constant.
-
         @param other The string to pilfer
 
         @see @ref pilfer
@@ -208,7 +209,7 @@ public:
 
         @param count The size of the resulting string.
 
-        @param ch THe value to initialize characters
+        @param ch The value to initialize characters
         of the string with.
 
         @param sp An optional pointer to the @ref storage
@@ -353,10 +354,6 @@ public:
         Construct the contents with copies of characters
         in the range `{first, last)`.
 
-        @par Constraints
-
-        `InputIt` satisfies __InputIterator__.
-
         @par Complexity
 
         Linear in `std::distance(first, last)`.
@@ -369,6 +366,12 @@ public:
 
         Calls to @ref storage::allocate may throw.
 
+        @tparam InputIt The type of the iterators.
+
+        @par Constraints
+
+        `InputIt` satisfies __InputIterator__.
+
         @param first An input iterator pointing to the
         first character to insert, or pointing to the
         end of the range.
@@ -380,8 +383,6 @@ public:
         to use. The container will acquire shared
         ownership of the storage object.
         The default argument for this parameter is `{}`.
-
-        @tparam InputIt The type of the iterators.
 
         @throw std::length_error `std::distance(first, last) > max_size()`.
     */
@@ -1004,10 +1005,6 @@ public:
         Replaces the contents with copies of characters
         in the range `{first, last)`.
 
-        @par Constraints
-
-        `InputIt` satisfies __InputIterator__.
-
         @par Complexity
 
         Linear in `std::distance(first, last)`.
@@ -1020,6 +1017,12 @@ public:
 
         Calls to @ref storage::allocate may throw.
 
+        @tparam InputIt The type of the iterators.
+
+        @par Constraints
+
+        `InputIt` satisfies __InputIterator__.
+
         @return `*this`
 
         @param first An input iterator pointing to the
@@ -1028,8 +1031,6 @@ public:
 
         @param last An input iterator pointing to the end
         of the range.
-
-        @tparam InputIt The type of the iterators.
 
         @throw std::length_error `std::distance(first, last) > max_size()`.
     */
@@ -1232,13 +1233,13 @@ public:
         Returns a reference to the character specified at
         location `pos`.
 
-        @par Precondition
-        
-        `pos >= size`
-
         @par Complexity
 
         Constant.
+
+        @par Precondition
+        
+        `pos >= size`
 
         @param pos A zero-based index to access
     */
@@ -1253,13 +1254,13 @@ public:
         Returns a reference to the character specified at
         location `pos`.
 
-        @par Precondition
-        
-        `pos >= size`
-
         @par Complexity
 
         Constant.
+
+        @par Precondition
+
+        `pos >= size`
 
         @param pos A zero-based index to access
     */
@@ -1273,13 +1274,13 @@ public:
 
         Returns a reference to the first character.
 
-        @par Precondition
-
-        `not empty()`
-
         @par Complexity
 
         Constant.
+
+        @par Precondition
+
+        `not empty()`
     */
     char&
     front()
@@ -1291,13 +1292,13 @@ public:
 
         Returns a reference to the first character.
 
-        @par Precondition
-
-        `not empty()`
-
         @par Complexity
 
         Constant.
+
+        @par Precondition
+
+        `not empty()`
     */
     char const&
     front() const
@@ -1309,13 +1310,13 @@ public:
 
         Returns a reference to the last character.
 
-        @par Precondition
-
-        `not empty()`
-
         @par Complexity
 
         Constant.
+
+        @par Precondition
+
+        `not empty()`
     */
     char&
     back()
@@ -1327,13 +1328,13 @@ public:
 
         Returns a reference to the last character.
 
-        @par Precondition
-
-        `not empty()`
-
         @par Complexity
 
         Constant.
+
+        @par Precondition
+
+        `not empty()`
     */
     char const&
     back() const
@@ -1518,12 +1519,12 @@ public:
         Returns the pointed-to character that corresponds to the last character
         of the non-reversed container. 
         
-        @note If the container is empty,
-        the returned iterator is equal to @ref rend()
-
         @par Complexity
 
         Constant.
+
+        @note If the container is empty,
+        the returned iterator is equal to @ref rend()
     */
     reverse_iterator
     rbegin() noexcept
@@ -1536,12 +1537,12 @@ public:
         Returns the pointed-to character that corresponds to the last character
         of the non-reversed container.
         
-        @note If the container is empty,
-        the returned iterator is equal to @ref rend()
-
         @par Complexity
 
         Constant.
+
+        @note If the container is empty,
+        the returned iterator is equal to @ref rend()
     */
     const_reverse_iterator
     rbegin() const noexcept
@@ -1554,12 +1555,12 @@ public:
         Returns the pointed-to character that corresponds to the last character
         of the non-reversed container.
         
-        @note If the container is empty,
-        the returned iterator is equal to @ref rend()
-
         @par Complexity
 
         Constant.
+
+        @note If the container is empty,
+        the returned iterator is equal to @ref rend()
     */
     const_reverse_iterator
     crbegin() const noexcept
@@ -1572,12 +1573,12 @@ public:
         Returns the pointed-to character that corresponds to the character
         preceding the first character of the non-reversed container. 
         
-        @note This character acts as a placeholder, attempting to access
-        it results in undefined behavior.
-
         @par Complexity
 
         Constant.
+
+        @note This character acts as a placeholder, attempting to access
+        it results in undefined behavior.
     */
     reverse_iterator
     rend() noexcept
@@ -1590,12 +1591,12 @@ public:
         Returns the pointed-to character that corresponds to the character
         preceding the first character of the non-reversed container. 
 
-        @note This character acts as a placeholder, attempting to access
-        it results in undefined behavior.
-
         @par Complexity
 
         Constant.
+
+        @note This character acts as a placeholder, attempting to access
+        it results in undefined behavior.
     */
     const_reverse_iterator
     rend() const noexcept
@@ -1608,12 +1609,12 @@ public:
         Returns the pointed-to character that corresponds to the character
         preceding the first character of the non-reversed container. 
         
-        @note This character acts as a placeholder, attempting to access
-        it results in undefined behavior.
-
         @par Complexity
 
         Constant.
+
+        @note This character acts as a placeholder, attempting to access
+        it results in undefined behavior.
     */
     const_reverse_iterator
     crend() const noexcept
@@ -1703,13 +1704,6 @@ public:
         elements and therefore the @ref size() of the container
         is not changed.
 
-        @note
-
-        If new memory is allocated, all iterators including any
-        past-the-end iterators, and all references to the
-        elements are invalidated. Otherwise, no iterators or
-        references are invalidated.
-
         @par Complexity
 
         At most, linear in @ref size().
@@ -1717,6 +1711,13 @@ public:
         @par Exception Safety
 
         Strong guarantee.
+
+        @note
+
+        If new memory is allocated, all iterators including any
+        past-the-end iterators, and all references to the
+        elements are invalidated. Otherwise, no iterators or
+        references are invalidated.
 
         @note
 
@@ -1740,15 +1741,15 @@ public:
         @ref capacity() to @ref size(). The request may
         or may not be fulfilled. 
         
+        @par Complexity
+
+        At most, linear in @ref size().
+
         @note If reallocation occurs, all iterators including 
         any past-the-end iterators, and all 
         references to characters are invalidated.
         Otherwise, no iterators or references are
         invalidated.
-
-        @par Complexity
-
-        At most, linear in @ref size().
     */
     BOOST_JSON_DECL
     void
@@ -1766,13 +1767,13 @@ public:
         call, @ref size() returns zero but @ref capacity()
         is unchanged. 
         
-        @note All references, pointers, or iterators
-        referring to contained elements are invalidated. Any
-        past-the-end iterators are also invalidated.
-
         @par Complexity
 
         Linear in @ref size().
+
+        @note All references, pointers, or iterators
+        referring to contained elements are invalidated. Any
+        past-the-end iterators are also invalidated.
     */
     BOOST_JSON_DECL
     void
@@ -1784,13 +1785,13 @@ public:
         
         Inserts `count` copies of `ch` at the position `pos`.
 
-        @note All references, pointers, or iterators
-        referring to contained elements are invalidated. Any
-        past-the-end iterators are also invalidated.
-
         @par Exception Safety
 
         Strong guarantee.
+
+        @note All references, pointers, or iterators
+        referring to contained elements are invalidated. Any
+        past-the-end iterators are also invalidated.
 
         @return `*this`
 
@@ -1814,13 +1815,13 @@ public:
         at the position `pos`. The length of the string is determined
         by using `traits_type::length(s)`.
 
-        @note All references, pointers, or iterators
-        referring to contained elements are invalidated. Any
-        past-the-end iterators are also invalidated.
-
         @par Exception Safety
 
         Strong guarantee.
+
+        @note All references, pointers, or iterators
+        referring to contained elements are invalidated. Any
+        past-the-end iterators are also invalidated.
 
         @return `*this`
 
@@ -1844,13 +1845,13 @@ public:
         Inserts `count` characters of the string pointed to by `s`
         at the position `pos`.
 
-        @note All references, pointers, or iterators
-        referring to contained elements are invalidated. Any
-        past-the-end iterators are also invalidated.
-
         @par Exception Safety
 
         Strong guarantee.
+
+        @note All references, pointers, or iterators
+        referring to contained elements are invalidated. Any
+        past-the-end iterators are also invalidated.
 
         @return `*this`
 
@@ -1873,13 +1874,13 @@ public:
         Inserts the string pointed to by `s`
         at the position `pos`.
 
-        @note All references, pointers, or iterators
-        referring to contained elements are invalidated. Any
-        past-the-end iterators are also invalidated.
-
         @par Exception Safety
 
         Strong guarantee.
+
+        @note All references, pointers, or iterators
+        referring to contained elements are invalidated. Any
+        past-the-end iterators are also invalidated.
 
         @return `*this`
 
@@ -1902,13 +1903,13 @@ public:
         Inserts a string, obtained by `str.substr(pos_str, count)`
         at the position `pos`.
 
-        @note All references, pointers, or iterators
-        referring to contained elements are invalidated. Any
-        past-the-end iterators are also invalidated.
-
         @par Exception Safety
 
         Strong guarantee.
+
+        @note All references, pointers, or iterators
+        referring to contained elements are invalidated. Any
+        past-the-end iterators are also invalidated.
 
         @return `*this`
 
@@ -1935,23 +1936,23 @@ public:
 
         Inserts the character `ch` before the character pointed by `pos`.
 
-        @note All references, pointers, or iterators
-        referring to contained elements are invalidated. Any
-        past-the-end iterators are also invalidated.
+        @par Precondition
+
+        `pos` shall be vaild within `[data(), data() + size()]`
 
         @par Exception Safety
 
         Strong guarantee.
+
+        @note All references, pointers, or iterators
+        referring to contained elements are invalidated. Any
+        past-the-end iterators are also invalidated.
 
         @return An iterator which refers to the first inserted character
         or `pos` if no characters were inserted
 
         @param pos The index to insert at.
         @param ch The character to insert.
-
-        @par Precondition
-
-        `pos` shall be vaild within `[data(), data() + size()]`
 
         @throw std::length_error `size() + 1 > max_size()`
     */
@@ -1967,13 +1968,17 @@ public:
 
         Inserts `count` copies of `ch` before the character pointed by `pos`.
 
-        @note All references, pointers, or iterators
-        referring to contained elements are invalidated. Any
-        past-the-end iterators are also invalidated.
+        @par Precondition
+
+        `pos` shall be valid within `[data(), data() + size()]`
 
         @par Exception Safety
 
         Strong guarantee.
+
+        @note All references, pointers, or iterators
+        referring to contained elements are invalidated. Any
+        past-the-end iterators are also invalidated.
 
         @return An iterator which refers to the first inserted character
         or `pos` if no characters were inserted
@@ -1981,10 +1986,6 @@ public:
         @param pos The position to insert at.
         @param count The number of characters to insert.
         @param ch The character to insert.
-
-        @par Precondition
-
-        `pos` shall be valid within `[data(), data() + size()]`
 
         @throw std::length_error `size() + count > max_size()`
     */
@@ -2000,23 +2001,25 @@ public:
         Inserts characters from the range `[first, last)` before the
         character pointed to by `pos`.
 
-        @note All references, pointers, or iterators
-        referring to contained elements are invalidated. Any
-        past-the-end iterators are also invalidated.
+        @par Precondition
 
-        @par Constraints
+        `pos` shall be valid within `[data(), data() + size()]`,
 
-        `InputIt` satisfies __InputIterator__.
+        `[first, last)` shall be a valid range
 
         @par Exception Safety
 
         Strong guarantee.
 
-        @par Precondition
+        @note All references, pointers, or iterators
+        referring to contained elements are invalidated. Any
+        past-the-end iterators are also invalidated.
 
-        `pos` shall be valid within `[data(), data() + size()]`, 
-        
-        `[first, last)` shall be a valid range
+        @tparam InputIt The type of the iterators.
+
+        @par Constraints
+
+        `InputIt` satisfies __InputIterator__.
 
         @return An iterator which refers to the first inserted character
         or `pos` if no characters were inserted
@@ -2024,8 +2027,6 @@ public:
         @param pos The position to insert at.
         @param first An iterator representing the first character to insert.
         @param last An iterator representing one past the last character to insert.
-
-        @tparam InputIt The type of the iterators.
 
         @throw std::length_error `size() + insert_count > max_size()`
     */
@@ -2044,23 +2045,23 @@ public:
 
         Inserts characters from `init` before `pos`.
 
-        @note All references, pointers, or iterators
-        referring to contained elements are invalidated. Any
-        past-the-end iterators are also invalidated.
+        @par Precondition
+
+        `pos` shall be valid within `[data(), data() + size()]`
 
         @par Exception Safety
 
         Strong guarantee.
+
+        @note All references, pointers, or iterators
+        referring to contained elements are invalidated. Any
+        past-the-end iterators are also invalidated.
 
         @return An iterator which refers to the first inserted character
         or `pos` if no characters were inserted
 
         @param pos The position to insert at.
         @param init The `initializer_list` from which to insert.
-
-        @par Precondition
-
-        `pos` shall be valid within `[data(), data() + size()]`
 
         @throw std::length_error `size() + init.size() > max_size()`
     */
@@ -2075,15 +2076,21 @@ public:
         Constructs a temporary `string_view` object `sv` from `t` and
         inserts `[sv.begin(), sv.end())` at `pos`.
 
-        @note All references, pointers, or iterators
-        referring to contained elements are invalidated. Any
-        past-the-end iterators are also invalidated.
+        @par Precondition
+
+        `pos` shall be valid within `[data(), data() + size()]`
 
         @par Exception Safety
 
         Strong guarantee.
 
+        @note All references, pointers, or iterators
+        referring to contained elements are invalidated. Any
+        past-the-end iterators are also invalidated.
+
         @return `*this`
+
+        @tparam T The type of the object to convert.
 
         @par Constraints
 
@@ -2091,8 +2098,6 @@ public:
 
         @param pos The index to insert at.
         @param t The object to insert from.
-
-        @tparam T The type of the object to convert.
 
         @throw std::length_error `size() + sv.size() > max_size()`
         @throw std::out_of_range `pos > size()`
@@ -2116,14 +2121,16 @@ public:
         Constructs a temporary `string_view` object `sv` from `t`
         and inserts `sv.substr(pos_str, count)` at `pos`.
 
-        @note All references, pointers, or iterators
-        referring to contained elements are invalidated. Any
-        past-the-end iterators are also invalidated.
-
         @par Exception Safety
 
         Strong guarantee.
 
+        @note All references, pointers, or iterators
+        referring to contained elements are invalidated. Any
+        past-the-end iterators are also invalidated.
+
+        @tparam T The type of the object to convert.
+        
         @par Constraints
 
         `T` satisfies __is_string_viewish__.
@@ -2135,8 +2142,6 @@ public:
         @param pos_str The index in the temporary `string_view` object 
         to start the substring from.
         @param count The number of characters to insert.
-
-        @tparam T The type of the object to convert.
 
         @throw std::length_error `size() + sv.size() > max_size()`
         @throw std::out_of_range `pos > size()`
@@ -2164,13 +2169,13 @@ public:
         Erases `num` characters from the string, starting at `pos`.
         `num` is determined as the the smaller of `count` and `size() - pos`.
 
-        @note All references, pointers, or iterators
-        referring to contained elements are invalidated. Any
-        past-the-end iterators are also invalidated.
-
         @par Exception Safety
 
         Strong guarantee.
+
+        @note All references, pointers, or iterators
+        referring to contained elements are invalidated. Any
+        past-the-end iterators are also invalidated.
 
         @return `*this`
 
@@ -2191,17 +2196,17 @@ public:
         
         Erases the character at `pos`.
 
-        @note All references, pointers, or iterators
-        referring to contained elements are invalidated. Any
-        past-the-end iterators are also invalidated.
+        @par Precondition
+
+        `pos` shall be valid within `[data(), data() + size()]`
 
         @par Exception Safety
 
         Strong guarantee.
 
-        @par Precondition
-
-        `pos` shall be valid within `[data(), data() + size()]`
+        @note All references, pointers, or iterators
+        referring to contained elements are invalidated. Any
+        past-the-end iterators are also invalidated.
 
         @return An iterator referring to character immediately following
         the erased character, or @ref end() if one does not exist.
@@ -2216,17 +2221,17 @@ public:
 
         Erases the characters in the range `[first, last)`.
 
-        @note All references, pointers, or iterators
-        referring to contained elements are invalidated. Any
-        past-the-end iterators are also invalidated.
+        @par Precondition
+
+        `[first, last]` shall be valid within `[data(), data() + size()]`
 
         @par Exception Safety
 
         Strong guarantee.
 
-        @par Precondition
-
-        `[first, last]` shall be valid within `[data(), data() + size()]`
+        @note All references, pointers, or iterators
+        referring to contained elements are invalidated. Any
+        past-the-end iterators are also invalidated.
 
         @return An iterator referring to the character `last` previously referred to, or @ref end() if one does not exist.
 
@@ -2392,17 +2397,19 @@ public:
         Appends characters from the range `[first, last)`
         to the end of the string.
 
-        @par Constraints
+        @par Precondition
 
-        `InputIt` satisfies __InputIterator__.
+        `[first, last)` shall be a valid range
 
         @par Exception Safety
 
         Strong guarantee.
 
-        @par Precondition
+        @tparam InputIt The type of the iterators.
 
-        `[first, last)` shall be a valid range
+        @par Constraints
+
+        `InputIt` satisfies __InputIterator__.
 
         @return `*this`
 
@@ -2410,8 +2417,6 @@ public:
         first character to append.
         @param last An iterator representing one past the
         last character to append.
-
-        @tparam InputIt The type of the iterators.
 
         @throw std::length_error `size() + insert_count > max_size()`
     */
@@ -2453,15 +2458,15 @@ public:
 
         Strong guarantee.
 
-        @return `*this`
-
+        @tparam T The type of the object to convert.
+        
         @par Constraints
 
         `T` satisfies __is_string_viewish__.
 
+        @return `*this`
+        
         @param t The object to append.
-
-        @tparam T The type of the object to convert.
 
         @throw std::length_error `size() + sv.size() > max_size()`
     */
@@ -2486,6 +2491,8 @@ public:
 
         Strong guarantee.
 
+        @tparam T The type of the object to convert.
+        
         @par Constraints
 
         `T` satisfies __is_string_viewish__.
@@ -2496,8 +2503,6 @@ public:
         @param pos The index to begin the substring from.
         @param count The number of characters to append.
         The default argument for this parameter is `npos`.
-
-        @tparam T The type of the object to convert.
 
         @throw std::length_error `size() + sv.size() > max_size()`
         @throw std::out_of_range `pos > sv.size()`
@@ -2876,7 +2881,7 @@ public:
         logically swapped by making a copy, which can throw.
         In this case all iterators and references are invalidated.
 
-        @par Preconditions
+        @par Precondition
 
         `&other != this`
         
@@ -3238,7 +3243,7 @@ private:
     which can throw. In this case all iterators and
     references are invalidated.
 
-    @par Preconditions
+    @par Precondition
 
     `&lhs != &rhs`
         
