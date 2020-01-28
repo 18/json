@@ -2094,10 +2094,11 @@ public:
 
         @par Constraints
 
-        `T` satisfies __is_string_viewish__.
+        `std::is_convertible<T const&, string_view>::value && 
+        !std::is_convertible<T const&, char const*>::value>::type`.
 
         @param pos The index to insert at.
-        @param t The object to insert from.
+        @param t The string to insert from.
 
         @throw std::length_error `size() + sv.size() > max_size()`
         @throw std::out_of_range `pos > size()`
@@ -2133,12 +2134,13 @@ public:
         
         @par Constraints
 
-        `T` satisfies __is_string_viewish__.
+        `std::is_convertible<T const&, string_view>::value && 
+        !std::is_convertible<T const&, char const*>::value>::type`.
 
         @return `*this`
 
         @param pos The index to insert at.
-        @param t The object to insert from.
+        @param t The string to insert from.
         @param pos_str The index in the temporary `string_view` object 
         to start the substring from.
         @param count The number of characters to insert.
@@ -2262,7 +2264,7 @@ public:
     void
     push_back(char ch);
 
-    /** Remove a character.
+    /** Remove the last character.
         
         Removes a character from the end of the string.
 
@@ -2462,11 +2464,12 @@ public:
         
         @par Constraints
 
-        `T` satisfies __is_string_viewish__.
+        `std::is_convertible<T const&, string_view>::value && 
+        !std::is_convertible<T const&, char const*>::value>::type`.
 
         @return `*this`
         
-        @param t The object to append.
+        @param t The string to append.
 
         @throw std::length_error `size() + sv.size() > max_size()`
     */
@@ -2495,11 +2498,12 @@ public:
         
         @par Constraints
 
-        `T` satisfies __is_string_viewish__.
+        `std::is_convertible<T const&, string_view>::value && 
+        !std::is_convertible<T const&, char const*>::value>::type`.
 
         @return `*this`
 
-        @param t The object to append.
+        @param t The string to append.
         @param pos The index to begin the substring from.
         @param count The number of characters to append.
         The default argument for this parameter is @ref npos.
@@ -2881,14 +2885,14 @@ public:
         logically swapped by making a copy, which can throw.
         In this case all iterators and references are invalidated.
 
-        @par Precondition
-
-        `&other != this`
-        
         @par Complexity
 
         Constant or linear in @ref size() plus `other.size()`.
 
+        @par Precondition
+
+        `&other != this`
+        
         @par Exception Safety
 
         Strong guarantee.
@@ -2906,6 +2910,24 @@ public:
     //
     //------------------------------------------------------
 
+    /** Find the first occurrence of a string within the string.
+        
+        Finds the first occurrence of `s` within the
+        string starting at the index `pos`.
+
+        @par Complexity
+
+        Linear.
+
+        @return The lowest index `idx` greater than or equal to `pos` 
+        where each element of `s` is equal to that of 
+        `[begin() + idx, begin() + idx + s.size())` 
+        if one exists, and @ref npos otherwise.
+
+        @param s The string to search for.
+        @param pos The index to start searching at. The default argument for
+        this parameter is `0`.
+    */
     std::size_t
     find(
         string const& s,
@@ -2914,6 +2936,26 @@ public:
         return string_view(*this).find(string_view(s), pos);
     }
 
+    /** Find the first occurrence of a string within the string.
+
+        Finds the first occurrence of the string pointed to
+        by `s` within the string starting at the index `pos`.
+
+        @par Complexity
+
+        Linear.
+
+        @note An empty string is always found.
+
+        @return The lowest index `idx` greater than or equal to `pos` 
+        where each element of `[s, s + count)` is equal to that of 
+        `[begin() + idx, begin() + idx + count)` if one exists,
+        and @ref npos otherwise.
+
+        @param s The string to search for.
+        @param pos The index to start searching at.
+        @param count The length of the string to search for.
+    */
     std::size_t
     find(
         char const* s,
@@ -2923,6 +2965,27 @@ public:
         return string_view(*this).find(s, pos, count);
     }
 
+    /** Find the first occurrence of a string within the string.
+
+        Finds the first occurrence of the string pointed to by `s`
+        of length `count` within the string starting at the index `pos`, 
+        where `count` is `traits_type::length(s)`.
+
+        @par Complexity
+
+        Linear.
+
+        @note An empty string is always found.
+
+        @return The lowest index `idx` greater than or equal to `pos` 
+        where each element of `[s, s + count)` is equal to that of 
+        `[begin() + idx, begin() + idx + count)` if one exists,
+        and @ref npos otherwise.
+
+        @param s The string to search for.
+        @param pos The index to start searching at. The default argument
+        for this parameter is `0`.
+    */
     std::size_t
     find(
         char const* s,
@@ -2931,7 +2994,22 @@ public:
         return string_view(*this).find(s, pos);
     }
 
+    /** Find the first occurrence of a character within the string.
+        
+        Finds the first occurrence of `ch` within the string
+        starting at the index `pos`.
 
+        @par Complexity
+
+        Linear.
+
+        @return The index corrosponding to the first occurrence of `ch` within
+        `[begin() + pos, end())` if it exists, and @ref npos otherwise.
+
+        @param ch The character to search for.
+        @param pos The index to start searching at. The default argument
+        for this parameter is `0`.
+    */
     std::size_t
     find(
         char ch,
@@ -2940,6 +3018,33 @@ public:
         return string_view(*this).find(ch, pos);
     }
 
+    /** Find the first occurrence of a string within the string.
+
+        Constructs a temporary `string_view` object `sv` from `t`, and finds
+        the first occurrence of `sv` within the string starting at the index `pos`.
+
+        @par Complexity
+
+        Linear.
+
+        @note An empty string is always found.
+
+        @tparam T The type of the object to convert.
+
+        @par Constraints
+
+        `std::is_convertible<T const&, string_view>::value && 
+        !std::is_convertible<T const&, char const*>::value>::type`.
+
+        @return The lowest index `idx` greater than or equal to `pos` 
+        where each element of `[sv.begin(), sv.end())` is equal to
+        that of `[begin() + idx, begin() + idx + count)` if one exists,
+        and @ref npos otherwise.
+
+        @param t The string to search for.
+        @param pos The index to start searching at. The default argument
+        for this parameter is `0`.
+    */
     template<class T
     #ifndef GENERATING_DOCUMENTATION
         ,class = detail::is_string_viewish<T>
@@ -2955,6 +3060,27 @@ public:
 
     //------------------------------------------------------
 
+    /** Find the last occurrence of a string within the string.
+
+        Finds the last occurrence of `s` within the string
+        starting before or at the index `pos`.
+
+        @par Complexity
+
+        Linear.
+
+        @return The highest index `idx` less than or equal to `pos`
+        where each element of `s` is equal to that 
+        of `[begin() + idx, begin() + idx + s.size())`
+        if one exists, and @ref npos otherwise.
+
+        @return The index corrosponding to the first character of the last occurrence
+        of `s` within `[begin(), begin() + pos]` if it exists, and @ref npos otherwise.
+
+        @param s The string to search for.
+        @param pos The index to start searching at. The default argument for
+        this parameter is @ref npos.
+    */
     std::size_t
     rfind(
         string const& s,
@@ -2963,6 +3089,25 @@ public:
         return string_view(*this).rfind(string_view(s), pos);
     }
 
+    /** Find the last occurrence of a string within the string.
+
+        Finds the last occurrence of the string pointed to
+        by `s` within the string starting before  or at 
+        the index `pos`.
+
+        @par Complexity
+
+        Linear.
+
+        @return The highest index `idx` less than or equal to `pos`
+        where each element of `[s, s + count)` is equal to that of
+        `[begin() + idx, begin() + idx + count)` if one exists,
+        and @ref npos otherwise.
+
+        @param s The string to search for.
+        @param pos The index to start searching at.
+        @param count The length of the string to search for.
+    */
     std::size_t
     rfind(
         char const* s,
@@ -2972,6 +3117,25 @@ public:
         return string_view(*this).rfind(s, pos, count);
     }
 
+    /** Find the last occurrence of a string within the string.
+
+        Finds the last occurrence of the string pointed to by `s`
+        of length `count` within the string starting before the
+        index `pos`, where `count` is `traits_type::length(s)`.
+
+        @par Complexity
+
+        Linear.
+
+        @return The highest index `idx` less than or equal to `pos`
+        where each element of `[s, s + count)` is equal to that of
+        `[begin() + idx, begin() + idx + count)` if one exists,
+        and @ref npos otherwise.
+
+        @param s The string to search for.
+        @param pos The index to stop searching at. The default argument
+        for this parameter is @ref npos.
+    */
     std::size_t
     rfind(
         char const* s,
@@ -2980,6 +3144,22 @@ public:
         return string_view(*this).rfind(s, pos);
     }
 
+    /** Find the last occurrence of a character within the string.
+
+        Finds the last occurrence of `ch` within the string
+        starting before or at the index `pos`.
+
+        @par Complexity
+
+        Linear.
+
+        @return The index corrosponding to the last occurrence of `ch` within
+        `[begin(), begin() + pos]` if it exists, and @ref npos otherwise.
+
+        @param ch The character to search for.
+        @param pos The index to stop searching at. The default argument
+        for this parameter is @ref npos.
+    */
     std::size_t
     rfind(
         char ch,
@@ -2988,6 +3168,32 @@ public:
         return string_view(*this).rfind(ch, pos);
     }
 
+    /** Find the last occurrence of a string within the string.
+
+        Constructs a temporary `string_view` object `sv` from `t`, and finds
+        the last occurrence of `sv` within the string starting before or at
+        the index `pos`.
+
+        @par Complexity
+
+        Linear.
+
+        @tparam T The type of the object to convert.
+
+        @par Constraints
+
+        `std::is_convertible<T const&, string_view>::value && 
+        !std::is_convertible<T const&, char const*>::value>::type`.
+
+        @return The highest index `idx` less than or equal to `pos`
+        where each element of `[sv.begin(), sv.end())` is equal to
+        that of `[begin() + idx, begin() + idx + count)` if one exists,
+        and @ref npos otherwise.
+
+        @param t The string to search for.
+        @param pos The index to start searching at. The default argument
+        for this parameter is @ref npos.
+    */
     template<class T
     #ifndef GENERATING_DOCUMENTATION
         ,class = detail::is_string_viewish<T>
@@ -3003,6 +3209,22 @@ public:
 
     //------------------------------------------------------
 
+    /** Find the first occurrence of any of the characters within the string.
+
+        Finds the first occurrence of any of the characters within `s` within the
+        string starting at the index `pos`.
+
+        @par Complexity
+
+        Linear.
+
+        @return The index corrosponding to the first occurrence of any of the characters
+        of `s` within `[begin() + pos, end())` if it exists, and @ref npos otherwise.
+
+        @param s The characters to search for.
+        @param pos The index to start searching at. The default argument for
+        this parameter is `0`.
+    */
     std::size_t
     find_first_of(
         string const& s,
@@ -3011,6 +3233,23 @@ public:
         return string_view(*this).find_first_of(string_view(s), pos);
     }
 
+    /** Find the first occurrence of any of the characters within the string.
+
+        Finds the first occurrence of any of the characters within the string pointed to
+        by `s` within the string starting at the index `pos`.
+
+        @par Complexity
+
+        Linear.
+
+        @return The index corrosponding to the first occurrence 
+        of any of the characters in `[s, s + count)` within `[begin() + pos, end())` 
+        if it exists, and @ref npos otherwise.
+
+        @param s The characters to search for.
+        @param pos The index to start searching at.
+        @param count The length of the string to search for.
+    */
     std::size_t
     find_first_of(
         char const* s,
@@ -3020,6 +3259,23 @@ public:
         return string_view(*this).find_first_of(s, pos, count);
     }
 
+    /** Find the first occurrence of any of the characters within the string.
+
+        Finds the first occurrence of the any of the characters within string
+        pointed to by `s` within the string starting at the index `pos`.
+
+        @par Complexity
+
+        Linear.
+
+        @return The index corrosponding to the first occurrence of any of
+        the characters in `[s, s + traits_type::length(s))` within 
+        `[begin() + pos, end())` if it exists, and @ref npos otherwise.
+
+        @param s The characters to search for.
+        @param pos The index to start searching at. The default argument
+        for this parameter is `0`.
+    */
     std::size_t
     find_first_of(
         char const* s,
@@ -3028,6 +3284,22 @@ public:
         return string_view(*this).find_first_of(s, pos);
     }
 
+    /** Find the first occurrence of a character within the string.
+
+        Finds the first occurrence of `ch` within the string
+        starting at the index `pos`.
+
+        @par Complexity
+
+        Linear.
+
+        @return The index corrosponding to the first occurrence of `ch` within
+        `[begin() + pos, end())` if it exists, and @ref npos otherwise.
+
+        @param ch The character to search for.
+        @param pos The index to start searching at. The default argument
+        for this parameter is `0`.
+    */
     std::size_t
     find_first_of(
         char ch,
@@ -3036,6 +3308,31 @@ public:
         return string_view(*this).find_first_of(ch, pos);
     }
 
+    /** Find the first occurrence of any of the characters within the string.
+
+        Constructs a temporary `string_view` object `sv` from `t`, and finds
+        the first occurrence of any of the characters in `sv`
+        within the string starting at the index `pos`.
+
+        @par Complexity
+
+        Linear.
+
+        @tparam T The type of the object to convert.
+
+        @par Constraints
+
+        `std::is_convertible<T const&, string_view>::value && 
+        !std::is_convertible<T const&, char const*>::value>::type`.
+
+        @return The index corrosponding to the first occurrence of
+        any of the characters in `[sv.begin(), sv.end())` within 
+        `[begin() + pos, end())` if it exists, and @ref npos otherwise.
+
+        @param t The characters to search for.
+        @param pos The index to start searching at. The default argument
+        for this parameter is `0`.
+    */
     template<class T
     #ifndef GENERATING_DOCUMENTATION
         ,class = detail::is_string_viewish<T>
@@ -3051,6 +3348,22 @@ public:
 
     //------------------------------------------------------
 
+    /** Find the first occurrence of any of the characters not within the string.
+
+        Finds the first occurrence of a character that is not within `s`
+        within the string starting at the index `pos`.
+
+        @par Complexity
+
+        Linear.
+
+        @return The index corrosponding to the first character of `[begin() + pos, end())`
+        that is not within `s` if it exists, and @ref npos otherwise.
+
+        @param s The characters to ignore.
+        @param pos The index to start searching at. The default argument for
+        this parameter is `0`.
+    */
     std::size_t
     find_first_not_of(
         string const& s,
@@ -3059,6 +3372,23 @@ public:
         return string_view(*this).find_first_not_of(string_view(s), pos);
     }
 
+    /** Find the first occurrence of any of the characters not within the string.
+
+        Finds the first occurrence of a character that is not within the string
+        pointed to by `s` within the string starting at the index `pos`.
+
+        @par Complexity
+
+        Linear.
+
+        @return The index corrosponding to the first character of `[begin() + pos, end())`
+        that is not within `[s, s + count)` if it exists, and @ref npos otherwise.
+
+        @param s The characters to ignore.
+        @param pos The index to start searching at. The default argument for
+        this parameter is `0`.
+        @param count The length of the characters to ignore.
+    */
     std::size_t
     find_first_not_of(
         char const* s,
@@ -3068,6 +3398,23 @@ public:
         return string_view(*this).find_first_not_of(s, pos, count);
     }
 
+    /** Find the first occurrence of a character not within the string.
+
+        Finds the first occurrence of a character that is not within the string
+        pointed to by `s` of length `count` within the string starting
+        at the index `pos`, where `count` is `traits_type::length(s)`.
+
+        @par Complexity
+
+        Linear.
+
+        @return The index corrosponding to the first character of `[begin() + pos, end())`
+        that is not within `[s, s + count)` if it exists, and @ref npos otherwise.
+
+        @param s The characters to ignore.
+        @param pos The index to start searching at. The default argument for
+        this parameter is `0`.
+    */
     std::size_t
     find_first_not_of(
         char const* s,
@@ -3076,6 +3423,22 @@ public:
         return string_view(*this).find_first_not_of(s, pos);
     }
 
+    /** Find the first occurrence of a character not equal to `ch`.
+
+        Finds the first occurrence of a character that is not equal
+        to `ch`.
+
+        @par Complexity
+
+        Linear.
+
+        @return The index corrosponding to the first character of `[begin() + pos, end())`
+        that is not equal to `ch` if it exists, and @ref npos otherwise.
+
+        @param ch The character to ignore.
+        @param pos The index to start searching at. The default argument for
+        this parameter is `0`.
+    */
     std::size_t
     find_first_not_of(
         char ch,
@@ -3084,6 +3447,30 @@ public:
         return string_view(*this).find_first_not_of(ch, pos);
     }
 
+    /** Find the first occurrence of a character not within the string.
+
+        Constructs a temporary `string_view` object `sv` from `t`, and finds
+        the first character that is not within `sv`, starting at the index `pos`.
+
+        @par Complexity
+
+        Linear.
+
+        @tparam T The type of the object to convert.
+
+        @par Constraints
+
+        `std::is_convertible<T const&, string_view>::value && 
+        !std::is_convertible<T const&, char const*>::value>::type`.
+
+        @return The index corrosponding to the first occurrence of
+        a character that is not in `[sv.begin(), sv.end())` within
+        `[begin() + pos, end())` if it exists, and @ref npos otherwise.
+
+        @param t The characters to ignore.
+        @param pos The index to start searching at. The default argument
+        for this parameter is `0`.
+    */
     template<class T
     #ifndef GENERATING_DOCUMENTATION
         ,class = detail::is_string_viewish<T>
@@ -3099,14 +3486,47 @@ public:
 
     //------------------------------------------------------
 
+    /** Find the last occurrence of any of the characters within the string.
+
+        Finds the last occurrence of any of the characters within `s` within the
+        string starting before or at the index `pos`.
+
+        @par Complexity
+
+        Linear.
+
+        @return The index corrosponding to the last occurrence of any of the characters
+        of `s` within `[begin(), begin() + pos]` if it exists, and @ref npos otherwise.
+
+        @param s The characters to search for.
+        @param pos The index to stop searching at. The default argument for
+        this parameter is @ref npos.
+    */
     std::size_t
     find_last_of(
         string const& s,
-        std::size_t pos = 0) const noexcept
+        std::size_t pos = npos) const noexcept
     {
         return string_view(*this).find_last_of(string_view(s), pos);
     }
 
+    /** Find the last occurrence of any of the characters within the string.
+
+        Finds the last occurrence of any of the characters within the string pointed to
+        by `s` within the string before or at the index `pos`.
+
+        @par Complexity
+
+        Linear.
+
+        @return The index corrosponding to the last occurrence
+        of any of the characters in `[s, s + count)` within `[begin(), begin() + pos]`
+        if it exists, and @ref npos otherwise.
+
+        @param s The characters to search for.
+        @param pos The index to stop searching at.
+        @param count The length of the string to search for.
+    */
     std::size_t
     find_last_of(
         char const* s,
@@ -3116,22 +3536,82 @@ public:
         return string_view(*this).find_last_of(s, pos, count);
     }
 
+    /** Find the last occurrence of any of the characters within the string.
+
+        Finds the last occurrence of any of the characters within the string pointed to
+        by `s` of length `count` within the string before or at the index `pos`, 
+        where `count` is `traits_type::length(s)`.
+
+        @par Complexity
+
+        Linear.
+
+        @return The index corrosponding to the last occurrence
+        of any of the characters in `[s, s + count)` within `[begin(), begin() + pos]`
+        if it exists, and @ref npos otherwise.
+
+        @param s The characters to search for.
+        @param pos The index to stop searching at. The default argument for
+        this parameter is @ref npos.
+    */
     std::size_t
     find_last_of(
         char const* s,
-        std::size_t pos = 0) const
+        std::size_t pos = npos) const
     {
         return string_view(*this).find_last_of(s, pos);
     }
 
+
+    /** Find the last occurrence of a character within the string.
+
+        Finds the last occurrence of `ch` within the string
+        before or at the index `pos`.
+
+        @par Complexity
+
+        Linear.
+
+        @return The index corrosponding to the last occurrence of `ch` within
+        `[begin(), begin() + pos]` if it exists, and @ref npos otherwise.
+
+        @param ch The character to search for.
+        @param pos The index to stop searching at. The default argument
+        for this parameter is @ref npos.
+    */
     std::size_t
     find_last_of(
         char ch,
-        std::size_t pos = 0) const noexcept
+        std::size_t pos = npos) const noexcept
     {
         return string_view(*this).find_last_of(ch, pos);
     }
 
+    /** Find the last occurrence of any of the characters within the string.
+
+        Constructs a temporary `string_view` object `sv` from `t`, and finds
+        the last occurrence of any of the characters in `sv`
+        within the string before or at the index `pos`.
+
+        @par Complexity
+
+        Linear.
+
+        @tparam T The type of the object to convert.
+
+        @par Constraints
+
+        `std::is_convertible<T const&, string_view>::value && 
+        !std::is_convertible<T const&, char const*>::value>::type`.
+
+        @return The index corrosponding to the last occurrence of
+        any of the characters in `[sv.begin(), sv.end())` within
+        `[begin(), begin() + pos]` if it exists, and @ref npos otherwise.
+
+        @param t The characters to search for.
+        @param pos The index to stop searching at. The default argument
+        for this parameter is @ref npos.
+    */
     template<class T
     #ifndef GENERATING_DOCUMENTATION
         ,class = detail::is_string_viewish<T>
@@ -3140,21 +3620,54 @@ public:
     std::size_t
     find_last_of(
         T const& t,
-        std::size_t pos = 0) const noexcept
+        std::size_t pos = npos) const noexcept
     {
         return string_view(*this).find_last_of(t, pos);
     }
 
     //------------------------------------------------------
 
+    /** Find the last occurrence of a character not within the string.
+
+        Finds the last occurrence of a character that is not within `s`
+        within the string before or at the index `pos`.
+
+        @par Complexity
+
+        Linear.
+
+        @return The index corrosponding to the last character of `[begin(), begin() + pos]`
+        that is not within `s` if it exists, and @ref npos otherwise.
+
+        @param s The characters to ignore.
+        @param pos The index to stop searching at. The default argument for
+        this parameter is @ref npos.
+    */
     std::size_t
     find_last_not_of(
         string const& s,
-        std::size_t pos = 0) const noexcept
+        std::size_t pos = npos) const noexcept
     {
         return string_view(*this).find_last_not_of(string_view(s), pos);
     }
 
+    /** Find the last occurrence of a character not within the string.
+
+        Finds the last occurrence of a character that is not within the
+        string pointed to by `s` within the string before or at the index `pos`.
+
+        @par Complexity
+
+        Linear.
+
+        @return The index corrosponding to the last character of `[begin(), begin() + pos]`
+        that is not within `[s, s + count)` if it exists, and @ref npos otherwise.
+
+        @param s The characters to ignore.
+        @param pos The index to stop searching at. The default argument for
+        this parameter is @ref npos.
+        @param count The length of the characters to ignore.
+    */
     std::size_t
     find_last_not_of(
         char const* s,
@@ -3164,22 +3677,79 @@ public:
         return string_view(*this).find_last_not_of(s, pos, count);
     }
 
+    /** Find the last occurrence of a character not within the string.
+
+        Finds the last occurrence of a character that is not within the
+        string pointed to by `s` of length `count` within the string 
+        before or at the index `pos`, where `count` is `traits_type::length(s)`.
+
+        @par Complexity
+
+        Linear.
+
+        @return The index corrosponding to the last character of `[begin(), begin() + pos]`
+        that is not within `[s, s + count)` if it exists, and @ref npos otherwise.
+
+        @param s The characters to ignore.
+        @param pos The index to stop searching at. The default argument for
+        this parameter is @ref npos.
+    */
     std::size_t
     find_last_not_of(
         char const* s,
-        std::size_t pos = 0) const
+        std::size_t pos = npos) const
     {
         return string_view(*this).find_last_not_of(s, pos);
     }
 
+    /** Find the last occurrence of a character not equal to `ch`.
+
+        Finds the last occurrence of a character that is not equal
+        to `ch` before or at the index `pos`.
+
+        @par Complexity
+
+        Linear.
+
+        @return The index corrosponding to the last character of `[begin(), begin() + pos]`
+        that is not equal to `ch` if it exists, and @ref npos otherwise.
+
+        @param ch The character to ignore.
+        @param pos The index to start searching at. The default argument for
+        this parameter is @ref npos.
+    */
     std::size_t
     find_last_not_of(
         char ch,
-        std::size_t pos = 0) const noexcept
+        std::size_t pos = npos) const noexcept
     {
         return string_view(*this).find_last_not_of(ch, pos);
     }
 
+    /** Find the last occurrence of a character not within the string.
+
+        Constructs a temporary `string_view` object `sv` from `t`, and finds
+        the last character that is not within `sv`, starting at the index `pos`.
+
+        @par Complexity
+
+        Linear.
+
+        @tparam T The type of the object to convert.
+
+        @par Constraints
+
+        `std::is_convertible<T const&, string_view>::value && 
+        !std::is_convertible<T const&, char const*>::value>::type`.
+
+        @return The index corrosponding to the last occurrence of
+        a character that is not in `[sv.begin(), sv.end())` within
+        `[begin(), begin() + pos]` if it exists, and @ref npos otherwise.
+
+        @param t The characters to ignore.
+        @param pos The index to start searching at. The default argument
+        for this parameter is @ref npos.
+    */
     template<class T
     #ifndef GENERATING_DOCUMENTATION
         ,class = detail::is_string_viewish<T>
@@ -3188,7 +3758,7 @@ public:
     std::size_t
     find_last_not_of(
         T const& t,
-        std::size_t pos = 0) const noexcept
+        std::size_t pos = npos) const noexcept
     {
         return string_view(*this).find_last_not_of(t, pos);
     }
