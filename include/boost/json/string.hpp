@@ -2041,7 +2041,7 @@ public:
         InputIt first,
         InputIt last);
 
-    /** Insert characters from an `initializer_list`.
+    /** Insert characters from an initializer list.
 
         Inserts characters from `init` before `pos`.
 
@@ -2061,7 +2061,7 @@ public:
         or `pos` if no characters were inserted
 
         @param pos The position to insert at.
-        @param init The `initializer_list` from which to insert.
+        @param init The initializer list from which to insert.
 
         @throw std::length_error `size() + init.size() > max_size()`
     */
@@ -2430,7 +2430,7 @@ public:
     string&
     append(InputIt first, InputIt last);
 
-    /** Append characters from an `initializer_list`.
+    /** Append characters from an initializer list.
 
         Appends characters from `init` to the
         end of the string.
@@ -2441,7 +2441,7 @@ public:
 
         @return `*this`
 
-        @param init The `initializer_list` to append.
+        @param init The initializer list to append.
 
         @throw std::length_error `size() + init.size() > max_size()`
     */
@@ -2692,18 +2692,91 @@ public:
 
     //------------------------------------------------------
 
+    /** Replace a substring with a string.
+
+        Replaces `rcount` characters starting at index `pos` with those
+        of `s`, where `rcount` is `std::min(count, size() - pos)`.
+
+        @par Exception Safety
+
+        Strong guarantee.
+
+        @note All references, pointers, or iterators
+        referring to contained elements are invalidated. Any
+        past-the-end iterators are also invalidated.
+
+        @return `*this`
+
+        @param pos The index to replace at.
+        @param count The number of characters to replace.
+        @param s The string to replace with.
+
+        @throw std::length_error `size() + (s.size() - rcount) > max_size()`
+        @throw std::out_of_range `pos > size()`
+    */
     string&
     replace(
         std::size_t pos,
         std::size_t count,
         string const& s);
 
+    /** Replace a range with a string.
+
+        Replaces the characters in the range `[first, last)`
+        with those of `s`.
+
+        @par Precondition
+
+        `[first, last)` is a valid range.
+
+        @par Exception Safety
+
+        Strong guarantee.
+
+        @note All references, pointers, or iterators
+        referring to contained elements are invalidated. Any
+        past-the-end iterators are also invalidated.
+
+        @return `*this`
+
+        @param first An iterator referring to the first character to replace.
+        @param last An iterator referring past the end of
+        the last character to replace.
+        @param s The string to replace with.
+
+        @throw std::length_error `size() + (s.size() - std::distance(first, last)) > max_size()`
+    */
     string&
     replace(
         const_iterator first,
         const_iterator last,
         string const& s);
 
+    /** Replace a substring with a substring.
+
+        Replaces `rcount` characters starting at index `pos` with those of
+        `s.substr(pos2, count2)`, where `rcount` is `std::min(count, size() - pos)`.
+
+        @par Exception Safety
+
+        Strong guarantee.
+
+        @note All references, pointers, or iterators
+        referring to contained elements are invalidated. Any
+        past-the-end iterators are also invalidated.
+
+        @return `*this`
+
+        @param pos The index to replace at.
+        @param count The number of characters to replace.
+        @param s The string to replace with.
+        @param pos2 The index to begin the substring.
+        @param count2 The length of the substring. 
+        The default argument for this parameter is @ref npos.
+
+        @throw std::length_error `size() + (std::min(s.size(), count2) - rcount) > max_size()`
+        @throw std::out_of_range `pos > size()`
+    */
     string&
     replace(
         std::size_t pos,
@@ -2712,6 +2785,42 @@ public:
         std::size_t pos2,
         std::size_t count2 = npos);
 
+    /** Replace a range with a range.
+
+        Replaces the characters in the range `[first, last)`
+        with those of `[first2, last2)`.
+
+        @par Precondition
+
+        `[first, last)` is a valid range.
+
+        `[first2, last2)` is a valid range.
+
+        @par Exception Safety
+
+        Strong guarantee.
+
+        @note All references, pointers, or iterators
+        referring to contained elements are invalidated. Any
+        past-the-end iterators are also invalidated.
+
+        @tparam InputIt The type of the iterators.
+
+        @par Constraints
+
+        `InputIt` satisfies __InputIterator__.
+
+        @return `*this`
+
+        @param first An iterator referring to the first character to replace.
+        @param last An iterator referring past the end of
+        the last character to replace.
+        @param first2 An iterator referring to the first character to replace with.
+        @param last2 An iterator referring past the end of
+        the last character to replace with.
+
+        @throw std::length_error `size() + (inserted - std::distance(first, last)) > max_size()`
+    */
     template<class InputIt
     #ifndef GENERATING_DOCUMENTATION
         ,class = is_inputit<InputIt>
@@ -2724,6 +2833,29 @@ public:
         InputIt first2,
         InputIt last2);
 
+    /** Replace a substring with a string.
+
+        Replaces `rcount` characters starting at index `pos` with those of
+        `[s, s + count2)`, where `rcount` is `std::min(count, size() - pos)`.
+
+        @par Exception Safety
+
+        Strong guarantee.
+
+        @note All references, pointers, or iterators
+        referring to contained elements are invalidated. Any
+        past-the-end iterators are also invalidated.
+
+        @return `*this`
+
+        @param pos The index to replace at.
+        @param count The number of characters to replace.
+        @param s The string to replace with.
+        @param count2 The length of the string to replace with.
+
+        @throw std::length_error `size() + (count2 - rcount) > max_size()`
+        @throw std::out_of_range `pos > size()`
+    */
     string&
     replace(
         std::size_t pos,
@@ -2731,6 +2863,33 @@ public:
         char const* s,
         std::size_t count2);
 
+    /** Replace a range with a string.
+
+        Replaces the characters in the range `[first, last)` with those of
+        `[s, s + count2)`.
+
+        @par Precondition
+
+        `[first, last)` is a valid range.
+
+        @par Exception Safety
+
+        Strong guarantee.
+
+        @note All references, pointers, or iterators
+        referring to contained elements are invalidated. Any
+        past-the-end iterators are also invalidated.
+
+        @return `*this`
+
+        @param first An iterator referring to the first character to replace.
+        @param last An iterator referring past the end of
+        the last character to replace.
+        @param s The string to replace with.
+        @param count2 The length of the string to replace with.
+
+        @throw std::length_error `size() + (count2 - std::distance(first, last)) > max_size()`
+    */
     string&
     replace(
         const_iterator first,
@@ -2738,18 +2897,91 @@ public:
         char const* s,
         std::size_t count2);
 
+
+    /** Replace a substring with a string.
+
+        Replaces `rcount` characters starting at index `pos` with those of
+        `[s, s + len)`, where the length of the string `len` is `traits_type::length(s)` and `rcount`
+        is `std::min(count, size() - pos)`.
+
+        @par Exception Safety
+
+        Strong guarantee.
+
+        @note All references, pointers, or iterators
+        referring to contained elements are invalidated. Any
+        past-the-end iterators are also invalidated.
+
+        @return `*this`
+
+        @param pos The index to replace at.
+        @param count The number of characters to replace.
+        @param s The string to replace with.
+
+        @throw std::length_error `size() + (len - rcount) > max_size()`
+        @throw std::out_of_range `pos > size()`
+    */
     string&
     replace(
         std::size_t pos,
         std::size_t count,
         char const* s);
 
+    /** Replace a range with a string.
+
+        Replaces the characters in the range `[first, last)` with those of
+        `[s, s + len)`, where the length of the string `len` is `traits_type::length(s)`.
+
+        @par Precondition
+
+        `[first, last)` shall be a valid range.
+
+        @par Exception Safety
+
+        Strong guarantee.
+
+        @note All references, pointers, or iterators
+        referring to contained elements are invalidated. Any
+        past-the-end iterators are also invalidated.
+
+        @return `*this`
+
+        @param first An iterator referring to the first character to replace.
+        @param last An iterator referring past the end of
+        the last character to replace.
+        @param s The string to replace with.
+
+        @throw std::length_error `size() + (len - std::distance(first, last)) > max_size()`
+    */
     string&
     replace(
         const_iterator first,
         const_iterator last,
         char const* s);
 
+    /** Replace a substring with copies of a character.
+
+        Replaces `rcount` characters starting at index `pos` with `count2` copies
+        of `ch`, where `rcount` is `std::min(count, size() - pos)`.
+
+        @par Exception Safety
+
+        Strong guarantee.
+
+        @note All references, pointers, or iterators
+        referring to contained elements are invalidated. Any
+        past-the-end iterators are also invalidated.
+
+        @return `*this`
+
+        @param pos The index to replace at.
+        @param count The number of characters to replace.
+        @param count2 The number of characters to replace with.
+        @param ch The character to replace with.
+
+        @throw std::length_error `size() + (count2 - rcount) > max_size()`
+        @throw std::out_of_range `pos > size()`
+    */
     string&
     replace(
         std::size_t pos,
@@ -2757,6 +2989,33 @@ public:
         std::size_t count2,
         char ch);
 
+    /** Replace a range with copies of a character.
+
+        Replaces the characters in the range `[first, last)` with
+        `count2` copies of `ch`.
+
+        @par Precondition
+
+        `[first, last)` is a valid range.
+
+        @par Exception Safety
+
+        Strong guarantee.
+
+        @note All references, pointers, or iterators
+        referring to contained elements are invalidated. Any
+        past-the-end iterators are also invalidated.
+
+        @return `*this`
+
+        @param first An iterator referring to the first character to replace.
+        @param last An iterator referring past the end of
+        the last character to replace.
+        @param count2 The number of characters to replace with.
+        @param ch The character to replace with.
+
+        @throw std::length_error `size() + (count2 - std::distance(first, last)) > max_size()`
+    */
     string&
     replace(
         const_iterator first,
@@ -2764,12 +3023,68 @@ public:
         std::size_t count2,
         char ch);
 
+    /** Replace a range with an initializer list.
+
+        Replaces the characters in the range `[first, last)`
+        with those of contained in the initializer list `init`.
+
+        @par Precondition
+
+        `[first, last)` is a valid range.
+
+        @par Exception Safety
+
+        Strong guarantee.
+
+        @note All references, pointers, or iterators
+        referring to contained elements are invalidated. Any
+        past-the-end iterators are also invalidated.
+
+        @return `*this`
+
+        @param first An iterator referring to the first character to replace.
+        @param last An iterator referring past the end of
+        the last character to replace.
+        @param init The initializer list to replace with.
+
+        @throw std::length_error `size() + (init.size() - std::distance(first, last)) > max_size()`
+    */
     string&
     replace(
         const_iterator first,
         const_iterator last,
         std::initializer_list<char> init);
 
+    /** Replace a substring with an object convertible to `string_view`.
+
+        Constructs a temporary `string_view` object `sv` from `t`, and
+        replaces `rcount` characters starting at index `pos` with those
+        of `sv`, where `rcount` is `std::min(count, size() - pos)`.
+
+        @par Exception Safety
+
+        Strong guarantee.
+
+        @note All references, pointers, or iterators
+        referring to contained elements are invalidated. Any
+        past-the-end iterators are also invalidated.
+
+        @tparam T The type of the object to convert.
+
+        @par Constraints
+
+        `std::is_convertible<T const&, string_view>::value &&
+        !std::is_convertible<T const&, char const*>::value>::type`.
+
+        @return `*this`
+
+        @param pos The index to replace at.
+        @param count The number of characters to replace.
+        @param t The object to replace with.
+
+        @throw std::length_error `size() + (sv.size() - rcount) > max_size()`
+        @throw std::out_of_range `pos > size()`
+    */
     template<class T
     #ifndef GENERATING_DOCUMENTATION
         ,class = detail::is_string_viewish<T>
@@ -2781,6 +3096,40 @@ public:
         std::size_t count,
         T const& t);
 
+    /** Replace a range with an object convertible to `string_view`.
+
+        Constructs a temporary `string_view` object `sv` from `t`, and
+        replaces the characters in the range `[first, last)` with those
+        of `sv`.
+
+        @par Precondition
+
+        `[first, last)` is a valid range.
+
+        @par Exception Safety
+
+        Strong guarantee.
+
+        @note All references, pointers, or iterators
+        referring to contained elements are invalidated. Any
+        past-the-end iterators are also invalidated.
+
+        @tparam T The type of the object to convert.
+
+        @par Constraints
+
+        `std::is_convertible<T const&, string_view>::value &&
+        !std::is_convertible<T const&, char const*>::value>::type`.
+
+        @return `*this`
+
+        @param first An iterator referring to the first character to replace.
+        @param last An iterator referring past the end of
+        the last character to replace.
+        @param t The object to replace with.
+
+        @throw std::length_error `size() + (sv.size() - rcount) > max_size()`
+    */
     template<class T
     #ifndef GENERATING_DOCUMENTATION
         ,class = detail::is_string_viewish<T>
@@ -2792,6 +3141,39 @@ public:
         const_iterator last,
         T const& t);
 
+    /** Replace a substring with a substring of an object convertible to `string_view`.
+
+        Constructs a temporary `string_view` object `sv` from `t`, and
+        replaces `rcount` characters starting at index `pos` with those
+        of `sv.substr(pos2, count2)`, where `rcount` is `std::min(count, size() - pos)`.
+
+        @par Exception Safety
+
+        Strong guarantee.
+
+        @note All references, pointers, or iterators
+        referring to contained elements are invalidated. Any
+        past-the-end iterators are also invalidated.
+
+        @tparam T The type of the object to convert.
+
+        @par Constraints
+
+        `std::is_convertible<T const&, string_view>::value &&
+        !std::is_convertible<T const&, char const*>::value>::type`.
+
+        @return `*this`
+
+        @param pos The index to replace at.
+        @param count The number of characters to replace.
+        @param t The object to replace with.
+        @param pos2 The index to begin the substring.
+        @param count2 The length of the substring. 
+        The default argument for this parameter is @ref npos.
+
+        @throw std::length_error `size() + (std::min(count2, sv.size()) - rcount) > max_size()`
+        @throw std::out_of_range `pos > size()`
+    */
     template<class T
     #ifndef GENERATING_DOCUMENTATION
         ,class = detail::is_string_viewish<T>
@@ -3398,7 +3780,7 @@ public:
         return string_view(*this).find_first_not_of(s, pos, count);
     }
 
-    /** Find the first occurrence of a character not within the string.
+    /** Find the first occurrence of any of the characters not within the string.
 
         Finds the first occurrence of a character that is not within the string
         pointed to by `s` of length `count` within the string starting
