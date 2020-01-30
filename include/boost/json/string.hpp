@@ -85,7 +85,7 @@ public:
     /// A random access iterator to an element
     using iterator          = char*;
 
-    /// A random access const iterator  to an element
+    /// A random access const iterator to an element
     using const_iterator    = char const*;
 
     /// A reverse random access iterator to an element
@@ -819,7 +819,7 @@ public:
 
         @param count The size of the resulting string.
 
-        @param ch THe value to initialize characters
+        @param ch The value to initialize characters
         of the string with.
 
         @throw std::length_error `count > max_size()`.
@@ -2095,7 +2095,7 @@ public:
         @par Constraints
 
         `std::is_convertible<T const&, string_view>::value && 
-        !std::is_convertible<T const&, char const*>::value>::type`.
+        !std::is_convertible<T const&, char const*>::value`.
 
         @param pos The index to insert at.
         @param t The string to insert from.
@@ -2135,7 +2135,7 @@ public:
         @par Constraints
 
         `std::is_convertible<T const&, string_view>::value && 
-        !std::is_convertible<T const&, char const*>::value>::type`.
+        !std::is_convertible<T const&, char const*>::value`.
 
         @return `*this`
 
@@ -2465,7 +2465,7 @@ public:
         @par Constraints
 
         `std::is_convertible<T const&, string_view>::value && 
-        !std::is_convertible<T const&, char const*>::value>::type`.
+        !std::is_convertible<T const&, char const*>::value`.
 
         @return `*this`
         
@@ -2499,7 +2499,7 @@ public:
         @par Constraints
 
         `std::is_convertible<T const&, string_view>::value && 
-        !std::is_convertible<T const&, char const*>::value>::type`.
+        !std::is_convertible<T const&, char const*>::value`.
 
         @return `*this`
 
@@ -2653,24 +2653,66 @@ public:
 
     //------------------------------------------------------
 
+    /** Return whether the string begins with a string.
+
+        Returns `true` if the string begins with `s`, and `false` otherwise.
+
+        @par Complexity
+
+        Linear.
+
+        @param s The `string_view` to check for.
+    */
     bool
     starts_with(string_view s) const noexcept
     {
         return substr(0, s.size()) == s;
     }
 
+    /** Return whether the string begins with a character.
+
+        Returns `true` if the string begins with `ch`, and `false` otherwise.
+
+        @par Complexity
+
+        Constant.
+
+        @param ch The character to check for.
+    */
     bool
     starts_with(char ch) const noexcept
     {
         return ! empty() && front() == ch;
     }
 
+    /** Return whether the string begins with a string.
+
+        Returns `true` if the string begins with the string 
+        pointed to be `s` of length `traits_type::length(s)`,
+        and `false` otherwise.
+
+        @par Complexity
+
+        Linear.
+
+        @param s The string to check for.
+    */
     bool 
     starts_with(char const* s) const
     {
         return starts_with(string_view(s));
     }
 
+    /** Return whether the string end with a string.
+
+        Returns `true` if the string end with `s`, and `false` otherwise.
+
+        @par Complexity
+
+        Linear.
+
+        @param s The `string_view` to check for.
+    */
     bool
     ends_with(string_view s) const noexcept
     {
@@ -2678,12 +2720,34 @@ public:
             substr(size() - s.size()) == s;
     }
 
+    /** Return whether the string ends with a character.
+
+        Returns `true` if the string ends with `ch`, and `false` otherwise.
+
+        @par Complexity
+
+        Constant.
+
+        @param ch The character to check for.
+    */
     bool
     ends_with(char ch) const noexcept
     {
         return ! empty() && back() == ch;
     }
 
+    /** Return whether the string ends with a string.
+
+        Returns `true` if the string ends with the string
+        pointed to be `s` of length `traits_type::length(s)`,
+        and `false` otherwise.
+
+        @par Complexity
+
+        Linear.
+
+        @param s The string to check for.
+    */
     bool 
     ends_with(char const* s) const
     {
@@ -2866,7 +2930,7 @@ public:
     /** Replace a range with a string.
 
         Replaces the characters in the range `[first, last)` with those of
-        `[s, s + count2)`.
+        `[s, s + count)`.
 
         @par Precondition
 
@@ -2886,16 +2950,16 @@ public:
         @param last An iterator referring past the end of
         the last character to replace.
         @param s The string to replace with.
-        @param count2 The length of the string to replace with.
+        @param count The length of the string to replace with.
 
-        @throw std::length_error `size() + (count2 - std::distance(first, last)) > max_size()`
+        @throw std::length_error `size() + (count - std::distance(first, last)) > max_size()`
     */
     string&
     replace(
         const_iterator first,
         const_iterator last,
         char const* s,
-        std::size_t count2);
+        std::size_t count);
 
 
     /** Replace a substring with a string.
@@ -2992,7 +3056,7 @@ public:
     /** Replace a range with copies of a character.
 
         Replaces the characters in the range `[first, last)` with
-        `count2` copies of `ch`.
+        `count` copies of `ch`.
 
         @par Precondition
 
@@ -3011,16 +3075,16 @@ public:
         @param first An iterator referring to the first character to replace.
         @param last An iterator referring past the end of
         the last character to replace.
-        @param count2 The number of characters to replace with.
+        @param count The number of characters to replace with.
         @param ch The character to replace with.
 
-        @throw std::length_error `size() + (count2 - std::distance(first, last)) > max_size()`
+        @throw std::length_error `size() + (count - std::distance(first, last)) > max_size()`
     */
     string&
     replace(
         const_iterator first,
         const_iterator last,
-        std::size_t count2,
+        std::size_t count,
         char ch);
 
     /** Replace a range with an initializer list.
@@ -3074,7 +3138,7 @@ public:
         @par Constraints
 
         `std::is_convertible<T const&, string_view>::value &&
-        !std::is_convertible<T const&, char const*>::value>::type`.
+        !std::is_convertible<T const&, char const*>::value`.
 
         @return `*this`
 
@@ -3119,7 +3183,7 @@ public:
         @par Constraints
 
         `std::is_convertible<T const&, string_view>::value &&
-        !std::is_convertible<T const&, char const*>::value>::type`.
+        !std::is_convertible<T const&, char const*>::value`.
 
         @return `*this`
 
@@ -3128,7 +3192,7 @@ public:
         the last character to replace.
         @param t The object to replace with.
 
-        @throw std::length_error `size() + (sv.size() - rcount) > max_size()`
+        @throw std::length_error `size() + (sv.size() - std::distance(first, last)) > max_size()`
     */
     template<class T
     #ifndef GENERATING_DOCUMENTATION
@@ -3160,7 +3224,7 @@ public:
         @par Constraints
 
         `std::is_convertible<T const&, string_view>::value &&
-        !std::is_convertible<T const&, char const*>::value>::type`.
+        !std::is_convertible<T const&, char const*>::value`.
 
         @return `*this`
 
@@ -3189,6 +3253,24 @@ public:
 
     //------------------------------------------------------
 
+    /** Return a substring.
+
+        Returns a substring of the string.
+
+        @par Exception Safety
+
+        Strong guarantee.
+
+        @return A `string_view` object starting at index
+        `pos` extending `std::min(count, size())` characters.
+
+        @param pos The index to being the substring at. The 
+        default arugment for this parameter is `0`.
+        @param count The length of the substring. The default arugment
+        for this parameter is @ref npos.
+
+        @throw std::out_of_range `pos > size()`
+    */
     string_view
     substr(
         std::size_t pos = 0,
@@ -3199,6 +3281,20 @@ public:
 
     //------------------------------------------------------
 
+    /** Copy a substring to another string.
+
+        Copies `std::min(count, size() - pos)` characters starting at
+        index `pos` to the string pointed to by `dest`.
+
+        @note The resulting string is not null terminated.
+
+        @param count The number of characters to copy.
+        @param dest The string to copy to.
+        @param pos The index to begin copying from. The 
+        default argument for this parameter is `0`.
+
+        @throw std::out_of_range `pos > max_size()`
+    */
     std::size_t
     copy(
         char* dest,
@@ -3210,12 +3306,34 @@ public:
 
     //------------------------------------------------------
 
+    /** Change the size of the string.
+        
+        Resizes the string to contain `count` characters. If
+        `count > size()`, characters with the value `0` are
+        appended. Otherwise, `size()` is reduced to `count`.
+
+        @param count The size to resize the string to.
+
+        @throw std::out_of_range `count > max_size()`
+    */
     void
     resize(std::size_t count)
     {
         resize(count, 0);
     }
 
+    /** Change the size of the string.
+
+        Resizes the string to contain `count` characters. If
+        `count > size()`, copies of `ch` are
+        appended. Otherwise, `size()` is reduced to `count`.
+
+        @param count The size to resize the string to.
+        @param ch The characters to append if the size
+        increases.
+
+        @throw std::out_of_range `count > max_size()`
+    */
     BOOST_JSON_DECL
     void
     resize(std::size_t count, char ch);
@@ -3232,13 +3350,7 @@ public:
 
         @par Precondition
 
-        @code
-        count <= capacity() - size()
-        @endcode
-
-        @par Exception Safety
-        
-        No-throw guarantee.
+        `count <= capacity() - size()`
 
         @param n The amount to increase the size by.
     */
@@ -3275,10 +3387,13 @@ public:
 
         `&other != this`
         
+        @note 
+
+        Calls to @ref storage::allocate may throw.
+
         @par Exception Safety
 
         Strong guarantee.
-        Calls to @ref storage::allocate may throw.
 
         @param other The string to swap with
     */
@@ -3416,7 +3531,7 @@ public:
         @par Constraints
 
         `std::is_convertible<T const&, string_view>::value && 
-        !std::is_convertible<T const&, char const*>::value>::type`.
+        !std::is_convertible<T const&, char const*>::value`.
 
         @return The lowest index `idx` greater than or equal to `pos` 
         where each element of `[sv.begin(), sv.end())` is equal to
@@ -3456,9 +3571,6 @@ public:
         of `[begin() + idx, begin() + idx + s.size())`
         if one exists, and @ref npos otherwise.
 
-        @return The index corrosponding to the first character of the last occurrence
-        of `s` within `[begin(), begin() + pos]` if it exists, and @ref npos otherwise.
-
         @param s The string to search for.
         @param pos The index to start searching at. The default argument for
         this parameter is @ref npos.
@@ -3474,7 +3586,7 @@ public:
     /** Find the last occurrence of a string within the string.
 
         Finds the last occurrence of the string pointed to
-        by `s` within the string starting before  or at 
+        by `s` within the string starting before or at 
         the index `pos`.
 
         @par Complexity
@@ -3502,7 +3614,7 @@ public:
     /** Find the last occurrence of a string within the string.
 
         Finds the last occurrence of the string pointed to by `s`
-        of length `count` within the string starting before the
+        of length `count` within the string starting before or at the
         index `pos`, where `count` is `traits_type::length(s)`.
 
         @par Complexity
@@ -3565,7 +3677,7 @@ public:
         @par Constraints
 
         `std::is_convertible<T const&, string_view>::value && 
-        !std::is_convertible<T const&, char const*>::value>::type`.
+        !std::is_convertible<T const&, char const*>::value`.
 
         @return The highest index `idx` less than or equal to `pos`
         where each element of `[sv.begin(), sv.end())` is equal to
@@ -3644,14 +3756,15 @@ public:
     /** Find the first occurrence of any of the characters within the string.
 
         Finds the first occurrence of the any of the characters within string
-        pointed to by `s` within the string starting at the index `pos`.
+        pointed to by `s` of length `count` within the string starting at the
+        index `pos`, where `count` is `traits_type::length(s)`.
 
         @par Complexity
 
         Linear.
 
         @return The index corrosponding to the first occurrence of any of
-        the characters in `[s, s + traits_type::length(s))` within 
+        the characters in `[s, s + count)` within 
         `[begin() + pos, end())` if it exists, and @ref npos otherwise.
 
         @param s The characters to search for.
@@ -3705,7 +3818,7 @@ public:
         @par Constraints
 
         `std::is_convertible<T const&, string_view>::value && 
-        !std::is_convertible<T const&, char const*>::value>::type`.
+        !std::is_convertible<T const&, char const*>::value`.
 
         @return The index corrosponding to the first occurrence of
         any of the characters in `[sv.begin(), sv.end())` within 
@@ -3843,7 +3956,7 @@ public:
         @par Constraints
 
         `std::is_convertible<T const&, string_view>::value && 
-        !std::is_convertible<T const&, char const*>::value>::type`.
+        !std::is_convertible<T const&, char const*>::value`.
 
         @return The index corrosponding to the first occurrence of
         a character that is not in `[sv.begin(), sv.end())` within
@@ -3984,7 +4097,7 @@ public:
         @par Constraints
 
         `std::is_convertible<T const&, string_view>::value && 
-        !std::is_convertible<T const&, char const*>::value>::type`.
+        !std::is_convertible<T const&, char const*>::value`.
 
         @return The index corrosponding to the last occurrence of
         any of the characters in `[sv.begin(), sv.end())` within
@@ -4122,7 +4235,7 @@ public:
         @par Constraints
 
         `std::is_convertible<T const&, string_view>::value && 
-        !std::is_convertible<T const&, char const*>::value>::type`.
+        !std::is_convertible<T const&, char const*>::value`.
 
         @return The index corrosponding to the last occurrence of
         a character that is not in `[sv.begin(), sv.end())` within
