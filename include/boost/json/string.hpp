@@ -2235,7 +2235,8 @@ public:
         referring to contained elements are invalidated. Any
         past-the-end iterators are also invalidated.
 
-        @return An iterator referring to the character `last` previously referred to, or @ref end() if one does not exist.
+        @return An iterator referring to the character `last`
+        previously referred to, or @ref end() if one does not exist.
 
         @param first An iterator representing the first character to erase.
         @param last An iterator representing one past the last character to erase.
@@ -2299,7 +2300,7 @@ public:
         std::size_t count,
         char ch);
 
-    /** Append a another string to the string.
+    /** Append a string to the string.
 
         Appends `s` the end of the string.
 
@@ -2528,12 +2529,38 @@ public:
 
     //------------------------------------------------------
 
+    /** Append a string to the string.
+
+        Appends `s` the end of the string.
+
+        @par Exception Safety
+
+        Strong guarantee.
+
+        @return `*this`
+
+        @param s The string to append.
+
+        @throw std::length_error `size() + s.size() > max_size()`
+    */
     string&
     operator+=(string const& s)
     {
         return append(s);
     }
 
+    /** Append a character.
+
+        Appends a character to the end of the string.
+
+        @par Exception Safety
+
+        Strong guarantee.
+
+        @param ch The character to append.
+
+        @throw std::length_error `size() + 1 > max_size()`
+    */
     string&
     operator+=(char ch)
     {
@@ -2541,18 +2568,71 @@ public:
         return *this;
     }
 
+    /** Append a null terminated string to the string.
+
+        Appends `count` characters from the null terminated
+        string pointed to by `s` to the end of the string.
+        `count` is obtained using `traits_type::length(s)`.
+
+        @par Exception Safety
+
+        Strong guarantee.
+
+        @return `*this`
+
+        @param s The string to append.
+
+        @throw std::length_error `size() + count > max_size()`
+    */
     string&
     operator+=(char const* s)
     {
         return append(s);
     }
 
+    /** Append characters from an initializer list.
+
+        Appends characters from `init` to the
+        end of the string.
+
+        @par Exception Safety
+
+        Strong guarantee.
+
+        @return `*this`
+
+        @param init The initializer list to append.
+
+        @throw std::length_error `size() + init.size() > max_size()`
+    */
     string&
     operator+=(std::initializer_list<char> init)
     {
         return append(init);
     }
 
+    /** Append characters from an object convertible to `string_view`.
+
+        Constructs a temporary `string_view` object `sv` from `t` and
+        appends `[sv.begin(), sv.end())` to the end of the string.
+
+        @par Exception Safety
+
+        Strong guarantee.
+
+        @tparam T The type of the object to convert.
+
+        @par Constraints
+
+        `std::is_convertible<T const&, string_view>::value &&
+        !std::is_convertible<T const&, char const*>::value`.
+
+        @return `*this`
+
+        @param t The string to append.
+
+        @throw std::length_error `size() + sv.size() > max_size()`
+    */
     template<class T
     #ifndef GENERATING_DOCUMENTATION
         ,class = detail::is_string_viewish<T>
