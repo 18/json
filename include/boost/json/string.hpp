@@ -1812,8 +1812,8 @@ public:
     /** Insert a string.
 
         Inserts the null-terminated character string pointed to by `s`
-        at the position `pos`. The length of the string is determined
-        by using `traits_type::length(s)`.
+        of length `count` at the position `pos` where `count`
+        is `traits_type::length(s)`.
 
         @par Exception Safety
 
@@ -1828,7 +1828,7 @@ public:
         @param pos The index to insert at.
         @param s The string to insert.
 
-        @throw std::length_error `size() + traits_type::length(s) > max_size()`
+        @throw std::length_error `size() + count > max_size()`
         @throw std::out_of_range `pos > size()`
     */
     string&
@@ -1871,8 +1871,8 @@ public:
 
     /** Insert a string.
 
-        Inserts the string pointed to by `s`
-        at the position `pos`.
+        Inserts the string `s` at the
+        position `pos`.
 
         @par Exception Safety
 
@@ -1919,7 +1919,7 @@ public:
         @param count The number of characters to insert. 
         The default argument for this parameter is @ref npos.
 
-        @throw std::length_error `size() + str.substr(pos_str, count).size() > max_size()`
+        @throw std::length_error `size() + s.substr(pos_str, count).size() > max_size()`
         @throw std::out_of_range `pos > size()`
     */
     string&
@@ -2566,6 +2566,23 @@ public:
 
     //------------------------------------------------------
 
+    /** Compare a string with the string.
+        
+        Lexicographically compares the characters of
+        `s` and the string.
+
+        @par Complexity
+
+        Linear.
+
+        @return Let `comp` be
+        `traits_type::compare(data(), s.data(), std::min(size(), s.size())`. 
+        If `comp != 0`, then the result is `comp`. Otherwise, the result is
+        `0` if `size() == s.size()`, `-1` if `size() < s.size()`, and `1`
+        otherwise.
+
+        @param s The string to compare.
+    */
     int
     compare(string const& s) const noexcept
     {
@@ -2573,6 +2590,28 @@ public:
             string_view(s));
     }
 
+    /** Compare a string with a substring.
+        
+        Lexicographically compares the characters of
+        `s` and the substring `sub`, where `sub` is 
+        `substr(pos1, count1)`.
+
+        @par Complexity
+
+        Linear.
+
+        @return Let `comp` be
+        `traits_type::compare(sub.data(), s.data(), std::min(sub.size(), s.size())`.
+        If `comp != 0`, then the result is `comp`. Otherwise, the result is
+        `0` if `sub.size() == s.size()`, `-1` if `sub.size() < s.size()`, and `1`
+        otherwise.
+
+        @param pos1 The index at which to begin the substring.
+        @param count1 The size of the substring.
+        @param s The string to compare.
+
+        @throw std::out_of_range `pos1 > size()`
+    */
     int
     compare(
         std::size_t pos1,
@@ -2583,6 +2622,32 @@ public:
             pos1, count1, string_view(s));
     }
 
+    /** Compare a substring with a substring.
+        
+        Lexicographically compares the characters of
+        the substrings `sub1` and `sub2`, where `sub1` is
+        `substr(pos1, count1)` and `sub2` is 
+        `s.substr(pos2, count2)`.
+
+        @par Complexity
+
+        Linear.
+
+        @return Let `comp` be
+        `traits_type::compare(sub1.data(), sub2.data(), std::min(sub1.size(), sub2.size())`.
+        If `comp != 0`, then the result is `comp`. Otherwise, the result is
+        `0` if `sub1.size() == sub2.size()`, `-1` if `sub1.size() < sub2.size()`, and `1`
+        otherwise.
+
+        @param pos1 The index at which to begin the substring.
+        @param count1 The size of the substring.
+        @param s The string to compare.
+        @param pos2 The index at which to begin the substring to compare.
+        @param count2 The size of the substring to compare.
+
+        @throw std::out_of_range `pos1 > size()`
+        @throw std::out_of_range `pos2 > s.size()`
+    */
     int
     compare(
         std::size_t pos1,
@@ -2596,12 +2661,54 @@ public:
             pos2, count2);
     }
 
+    /** Compare a string with the string.
+
+        Lexicographically compares the characters of
+        the string pointed to by `s` of length `len` 
+        and the string, where `len` is `traits_type::length(s)`.
+
+        @par Complexity
+
+        Linear.
+
+        @return Let `comp` be
+        `traits_type::compare(data(), s, std::min(size(), len)`.
+        If `comp != 0`, then the result is `comp`. Otherwise, the result is
+        `0` if `size() == len`, `-1` if `size() < len`, and `1`
+        otherwise.
+
+        @param s The string to compare.
+    */
     int
     compare(char const* s) const
     {
         return string_view(*this).compare(s);
     }
 
+    /** Compare a string with substring.
+
+        Lexicographically compares the characters of
+        the string pointed to by `s` of length `len`
+        and the substring `sub`, where `len` is
+        `traits_type::length(s)` and `sub` is 
+        `substr(pos1, count1)`.
+
+        @par Complexity
+
+        Linear.
+
+        @return Let `comp` be
+        `traits_type::compare(sub.data(), s, std::min(size(), len)`.
+        If `comp != 0`, then the result is `comp`. Otherwise, the result is
+        `0` if `sub.size() == len`, `-1` if `sub.size() < len`, and `1`
+        otherwise.
+
+        @param pos1 The index at which to begin the substring.
+        @param count1 The size of the substring.
+        @param s The string to compare.
+        
+        @throw std::out_of_range `pos1 > size()`
+    */
     int
     compare(
         std::size_t pos1,
@@ -2612,6 +2719,29 @@ public:
             pos1, count1, s);
     }
 
+    /** Compare a string with a substring.
+        
+        Lexicographically compares the characters of
+        the string pointed to by `s` and the substring
+        `sub`, where `sub` is `substr(pos1, count1)`.
+
+        @par Complexity
+
+        Linear.
+
+        @return Let `comp` be
+        `traits_type::compare(sub.data(), s, std::min(size(), count2)`.
+        If `comp != 0`, then the result is `comp`. Otherwise, the result is
+        `0` if `sub.size() == count2`, `-1` if `sub.size() < count2`, and `1`
+        otherwise.
+
+        @param pos1 The index at which to begin the substring.
+        @param count1 The size of the substring.
+        @param s The string to compare.
+        @param count2 The size of the string to compare.
+
+        @throw std::out_of_range `pos1 > size()`
+    */
     int
     compare(
         std::size_t pos1,
@@ -2623,12 +2753,51 @@ public:
             pos1, count1, s, count2);
     }
 
+    /** Compare a string with the string.
+        
+        Lexicographically compares the characters of
+        `s` and the string.
+
+        @par Complexity
+
+        Linear.
+
+        @return Let `comp` be
+        `traits_type::compare(data(), s.data(), std::min(size(), s.size())`.
+        If `comp != 0`, then the result is `comp`. Otherwise, the result is
+        `0` if `size() == s.size()`, `-1` if `size() < s.size()`, and `1`
+        otherwise.
+
+        @param s The string to compare.
+    */
     int
     compare(string_view s) const noexcept
     {
         return string_view(*this).compare(s);
     }
 
+    /** Compare a string with a substring.
+        
+        Lexicographically compares the characters of
+        `s` and the substring `sub`, where `sub` is
+        `substr(pos1, count1)`.
+
+        @par Complexity
+
+        Linear.
+
+        @return Let `comp` be
+        `traits_type::compare(sub.data(), s.data(), std::min(sub.size(), s.size())`.
+        If `comp != 0`, then the result is `comp`. Otherwise, the result is
+        `0` if `sub.size() == s.size()`, `-1` if `sub.size() < s.size()`, and `1`
+        otherwise.
+
+        @param pos1 The index at which to begin the substring.
+        @param count1 The size of the substring.
+        @param s The string to compare.
+
+        @throw std::out_of_range `pos1 > size()`
+    */
     int
     compare(
         std::size_t pos1,
@@ -2639,6 +2808,32 @@ public:
             pos1, count1, s);
     }
 
+    /** Compare a substring with a substring.
+        
+        Lexicographically compares the characters of
+        the substrings `sub1` and `sub2`, where `sub1` is
+        `substr(pos1, count1)` and `sub2` is 
+        `s.substr(pos2, count2)`.
+
+        @par Complexity
+
+        Linear.
+
+        @return Let `comp` be
+        `traits_type::compare(sub1.data(), sub2.data(), std::min(sub1.size(), sub2.size())`.
+        If `comp != 0`, then the result is `comp`. Otherwise, the result is
+        `0` if `sub1.size() == sub2.size()`, `-1` if `sub1.size() < sub2.size()`, and `1`
+        otherwise.
+
+        @param pos1 The index at which to begin the substring.
+        @param count1 The size of the substring.
+        @param s The string to compare.
+        @param pos2 The index at which to begin the substring to compare.
+        @param count2 The size of the substring to compare.
+
+        @throw std::out_of_range `pos1 > size()`
+        @throw std::out_of_range `pos2 > s.size()`
+    */
     int
     compare(
         std::size_t pos1,
@@ -3255,14 +3450,14 @@ public:
 
     /** Return a substring.
 
-        Returns a substring of the string.
+        Returns a view of a substring.
 
         @par Exception Safety
 
         Strong guarantee.
 
-        @return A `string_view` object starting at index
-        `pos` extending `std::min(count, size())` characters.
+        @return A `string_view` object referring 
+        to `[data() + pos, std::min(count, size() - pos))`.
 
         @param pos The index to being the substring at. The 
         default arugment for this parameter is `0`.
@@ -3287,6 +3482,8 @@ public:
         index `pos` to the string pointed to by `dest`.
 
         @note The resulting string is not null terminated.
+
+        @return The number of characters copied.
 
         @param count The number of characters to copy.
         @param dest The string to copy to.
