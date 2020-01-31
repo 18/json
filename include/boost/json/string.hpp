@@ -1403,7 +1403,7 @@ public:
         return impl_.data();
     }
 
-    /** Convert to a `string view` referring to the string.
+    /** Convert to a `string_view` referring to the string.
 
         Returns a string view to the
         underlying character string. The size of the view does
