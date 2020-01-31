@@ -2600,6 +2600,10 @@ public:
 
         Linear.
 
+        @par Exception Safety
+
+        Strong guarantee.
+
         @return Let `comp` be
         `traits_type::compare(sub.data(), s.data(), std::min(sub.size(), s.size())`.
         If `comp != 0`, then the result is `comp`. Otherwise, the result is
@@ -2632,6 +2636,10 @@ public:
         @par Complexity
 
         Linear.
+
+        @par Exception Safety
+
+        Strong guarantee.
 
         @return Let `comp` be
         `traits_type::compare(sub1.data(), sub2.data(), std::min(sub1.size(), sub2.size())`.
@@ -2697,6 +2705,10 @@ public:
 
         Linear.
 
+        @par Exception Safety
+
+        Strong guarantee.
+
         @return Let `comp` be
         `traits_type::compare(sub.data(), s, std::min(size(), len)`.
         If `comp != 0`, then the result is `comp`. Otherwise, the result is
@@ -2728,6 +2740,10 @@ public:
         @par Complexity
 
         Linear.
+
+        @par Exception Safety
+
+        Strong guarantee.
 
         @return Let `comp` be
         `traits_type::compare(sub.data(), s, std::min(size(), count2)`.
@@ -2786,6 +2802,10 @@ public:
 
         Linear.
 
+        @par Exception Safety
+
+        Strong guarantee.
+
         @return Let `comp` be
         `traits_type::compare(sub.data(), s.data(), std::min(sub.size(), s.size())`.
         If `comp != 0`, then the result is `comp`. Otherwise, the result is
@@ -2818,6 +2838,10 @@ public:
         @par Complexity
 
         Linear.
+
+        @par Exception Safety
+
+        Strong guarantee.
 
         @return Let `comp` be
         `traits_type::compare(sub1.data(), sub2.data(), std::min(sub1.size(), sub2.size())`.
