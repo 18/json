@@ -17,60 +17,6 @@
 namespace boost {
 namespace json {
 namespace detail {
-namespace empty_types {
-
-struct class_type {};
-enum unscoped_enumeration_type { };
-enum class scoped_enumeration_type { };
-
-} // empty_types
-
-// [support.types] p5: The type max_­align_­t is a trivial
-// standard-layout type whose alignment requirement
-// is at least as great as that of every scalar type.
-struct max_align_t
-{
-    // arithmetic types
-    char a_;
-    char16_t b_;
-    char32_t c_;
-    bool d_;
-    short int e_;
-    int f_;
-    long int g_;
-    long long int h_;
-    wchar_t i_;
-    float j_;
-    double k_;
-    long double l_;
-    // enumeration types
-    empty_types::unscoped_enumeration_type m_;
-    empty_types::scoped_enumeration_type n_;
-    // pointer types
-    void* o_;
-    char* p_;
-    empty_types::class_type* q_;
-    empty_types::unscoped_enumeration_type* r_;
-    empty_types::scoped_enumeration_type* s_;
-    void(*t_)();
-    // pointer to member types
-    char empty_types::class_type::* u_;
-    void (empty_types::class_type::*v_)();
-    // nullptr
-    std::nullptr_t w_;
-};
-
-inline
-constexpr
-std::size_t
-max_align()
-{
-#ifdef BOOST_JSON_STANDALONE
-    return alignof(std::max_align_t);
-#else
-    return alignof(max_align_t);
-#endif
-}
 
 inline
 unsigned char*

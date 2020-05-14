@@ -13,7 +13,6 @@
 
 #include <boost/json/detail/config.hpp>
 #include <boost/json/storage_ptr.hpp>
-#include <boost/json/detail/monotonic_resource.hpp>
 
 namespace boost {
 namespace json {
@@ -41,7 +40,7 @@ class monotonic_resource final
         }
     };
 
-    struct alignas(detail::max_align()) block;
+    struct block;
 
     std::size_t block_size_;
     block* head_ = nullptr;

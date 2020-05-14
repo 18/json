@@ -69,7 +69,7 @@ public:
             {
                 const auto size = ((i * 3) % 32) + 1;
                 std::size_t next = 1;
-                for (auto mod = i % detail::max_align();
+                for (auto mod = i % alignof(long double);
                     mod; mod >>= 1, next <<= 1);
                 const auto align = (std::max)(next,
                     std::size_t(1));

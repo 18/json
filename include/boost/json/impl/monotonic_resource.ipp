@@ -12,16 +12,14 @@
 #define BOOST_JSON_IMPL_MONOTONIC_RESOURCE_IPP
 
 #include <boost/json/monotonic_resource.hpp>
+#include <boost/json/detail/monotonic_resource.hpp>
 
 #include <memory>
 
 namespace boost {
 namespace json {
 
-// ensures that the alignment of base is
-// the strictest fundamental alignment requirement
-struct alignas(detail::max_align())
-    monotonic_resource::block
+struct monotonic_resource::block
 {
     std::size_t size;
     block* next = nullptr;
@@ -68,17 +66,14 @@ allocate_new_block(std::size_t size) ->
              block storage layout:        
            [ n ] = n allocated bytes
       
-                header         data
-           [ sizeof(block) ] [ size ]
-      
-        data is guaranteed to be aligned
-            to alignof(max_align_t)
+             data        header         
+           [ size ] [ sizeof(block) ]
     -------------------------------------*/
     const auto bytes = size + sizeof(block);
     const auto data = static_cast<unsigned char*>(
         ::operator new(bytes));
-    head_ = ::new(static_cast<void*>(data))
-        block(data + sizeof(block), size, head_);
+    head_ = ::new(static_cast<void*>(data + size))
+        block(data, size, head_);
     return *head_;
 }
 
@@ -124,7 +119,7 @@ monotonic_resource::
     for(auto b = head_; b;)
     {
         auto next = b->next;
-        ::operator delete(b);
+        ::operator delete(b->base);
         b = next;
     }
 }
