@@ -53,6 +53,12 @@ public:
         return p_;
     }
 
+    char const*
+    end() const noexcept
+    {
+        return end_;
+    }
+
     operator bool() const noexcept
     {
         return p_ < end_;
@@ -80,6 +86,13 @@ public:
     {
         BOOST_ASSERT(n <= remain());
         p_ += n;
+    }
+
+    void
+    skip_to(const char* p) noexcept
+    {
+        BOOST_ASSERT(p <= end_);
+        p_ = p;
     }
 };
 

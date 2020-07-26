@@ -240,13 +240,9 @@ bool
 basic_parser::
 skip_white(const_stream& cs)
 {
-    char const * p = cs.data();
-    std::size_t n = cs.remain();
-
-    std::size_t n2 = detail::count_whitespace( p, n );
-    cs.skip( n2 );
-
-    return n2 < n;
+    cs.skip_to(detail::count_whitespace(
+        cs.data(), cs.end()));
+    return cs;
 }
 
 template<class Handler>
