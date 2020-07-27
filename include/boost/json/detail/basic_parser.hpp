@@ -113,8 +113,11 @@ class basic_parser
     inline static bool is_control(char c) noexcept;
     inline static char hex_digit(char c) noexcept;
     inline void reserve();
-    inline void suspend(state st);
-    inline void suspend(state st, number const& num);
+    inline result suspend(state st);
+    inline result suspend(state st, number const& num);
+    inline result maybe_suspend(state st);
+    inline result maybe_suspend(state st, const number& num);
+    inline result maybe_suspend(result r, state st);
     inline bool skip_white(const_stream& cs);
 
     template<class Handler>
