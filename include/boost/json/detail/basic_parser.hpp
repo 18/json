@@ -107,7 +107,6 @@ class basic_parser
     unsigned u2_;
     bool more_; // false for final buffer
     bool complete_ = false; // true on complete parse
-    bool is_key_;
     parse_options opt_;
 
     inline static bool is_control(char c) noexcept;
@@ -159,7 +158,8 @@ class basic_parser
     template<bool StackEmpty, class Handler>
     result parse_false(Handler& h, const_stream& cs);
     
-    template<bool StackEmpty, bool AllowInvalid, class Handler>
+    template<bool StackEmpty, bool IsKey,
+        bool AllowInvalid, class Handler>
     result parse_string(Handler& h, const_stream& cs);
     
     template<bool StackEmpty, char First, class Handler>

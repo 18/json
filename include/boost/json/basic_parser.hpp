@@ -858,7 +858,7 @@ parse_value(
             err, err, err, err, err, err, err, err, err, err, err, err, err, err, err, err,
             err, err, err, err, err, err, err, err, err, err, err, err, err, err, err, err,
             err, err,
-                &basic_parser::parse_string<true, AllowInvalid, Handler>,
+                &basic_parser::parse_string<true, false, AllowInvalid, Handler>,
                 err, err, err, err, err, err, err, err, err, err,
                 &basic_parser::parse_number<true, '-', Handler>,
                 err,
@@ -935,8 +935,8 @@ resume_value(
     case state::sur3: case state::sur4:
     case state::sur5: case state::sur6:
     case state::utf17: case state::utf18:
-        return parse_string<
-            StackEmpty, AllowInvalid>(h, cs0);
+        return parse_string<StackEmpty, 
+            false, AllowInvalid>(h, cs0);
 
     case state::arr1: case state::arr2:
     case state::arr3: case state::arr4:
@@ -1197,6 +1197,7 @@ do_fal4:
 
 template<
     bool StackEmpty, 
+    bool IsKey,
     bool AllowInvalid,
     class Handler>
 auto
@@ -1206,6 +1207,10 @@ parse_string(
     const_stream& cs0) ->
         result
 {
+    constexpr auto complete_handler = IsKey ? 
+        &Handler::on_key : &Handler::on_string;
+    constexpr auto partial_handler = IsKey ? 
+        &Handler::on_key_part : &Handler::on_string_part;
     detail::local_const_stream cs(cs0);
     detail::buffer<BOOST_JSON_PARSER_BUFFER_SIZE> temp;
     char const* start;
@@ -1263,21 +1268,10 @@ parse_string(
             if(BOOST_JSON_LIKELY(
                 c == '\x22')) // '"'
             {
-                if(is_key_)
-                {
-                    if(BOOST_JSON_UNLIKELY(
-                        ! h.on_key({ start,
-                        cs.used(start)}, ec_)))
-                        return result::fail;
-                    is_key_ = false;
-                }
-                else
-                {
-                    if(BOOST_JSON_UNLIKELY(
-                        ! h.on_string({ start,
-                        cs.used(start)}, ec_)))
-                        return result::fail;
-                }
+                if(BOOST_JSON_UNLIKELY(
+                    ! (h.*complete_handler)({start,
+                    cs.used(start)}, ec_)))
+                    return result::fail;
                 ++cs;
                 return result::ok;
             }
@@ -1298,20 +1292,10 @@ do_utf17:
                 if(BOOST_JSON_LIKELY(
                     cs.data() > start))
                 {
-                    if(is_key_)
-                    {
-                        if(BOOST_JSON_UNLIKELY(
-                            ! h.on_key_part({start,
-                                cs.used(start)}, ec_)))
-                            return result::fail;
-                    }
-                    else
-                    {
-                        if(BOOST_JSON_UNLIKELY(
-                            ! h.on_string_part({start,
-                                cs.used(start)}, ec_)))
-                            return result::fail;
-                    }
+                    if(BOOST_JSON_UNLIKELY(
+                        ! (h.*partial_handler)({start,
+                            cs.used(start)}, ec_)))
+                        return result::fail;
                 }
                 // Unescaped JSON is never larger than its escaped version.
                 // To efficiently process only what will fit in the temporary buffer,
@@ -1336,20 +1320,10 @@ do_utf17:
             if(BOOST_JSON_LIKELY(
                 cs.data() > start))
             {
-                if(is_key_)
-                {
-                    if(BOOST_JSON_UNLIKELY(
-                        ! h.on_key_part({start,
-                            cs.used(start)}, ec_)))
-                        return result::fail;
-                }
-                else
-                {
-                    if(BOOST_JSON_UNLIKELY(
-                        ! h.on_string_part({start,
-                            cs.used(start)}, ec_)))
-                        return result::fail;
-                }
+                if(BOOST_JSON_UNLIKELY(
+                    ! (h.*partial_handler)({start,
+                        cs.used(start)}, ec_)))
+                    return result::fail;
             }
             suspend(state::str1);
         }
@@ -1378,19 +1352,9 @@ do_str2:
             if(BOOST_JSON_LIKELY(
                 c == '\x22')) // '"'
             {
-                if(is_key_)
-                {
-                    if(BOOST_JSON_UNLIKELY(
-                        ! h.on_key(temp, ec_)))
-                        return result::fail;
-                    is_key_ = false;
-                }
-                else
-                {
-                    if(BOOST_JSON_UNLIKELY(
-                        ! h.on_string(temp, ec_)))
-                        return result::fail;
-                }
+                if(BOOST_JSON_UNLIKELY(
+                    ! (h.*complete_handler)(temp, ec_)))
+                    return result::fail;
                 ++cs;
                 return result::ok;
             }
@@ -1425,18 +1389,9 @@ do_utf18:
         if(BOOST_JSON_LIKELY(
             ! temp.empty()))
         {
-            if(is_key_)
-            {
-                if(BOOST_JSON_UNLIKELY(
-                    ! h.on_key_part(temp, ec_)))
-                    return result::fail;
-            }
-            else
-            {
-                if(BOOST_JSON_UNLIKELY(
-                    ! h.on_string_part(temp, ec_)))
-                    return result::fail;
-            }
+            if(BOOST_JSON_UNLIKELY(
+                ! (h.*partial_handler)(temp, ec_)))
+                return result::fail;
             temp.clear();
         }
         cs.clip(temp.max_size());
@@ -1604,18 +1559,9 @@ do_str3:
                 if(BOOST_JSON_LIKELY(
                     ! temp.empty()))
                 {
-                    if(is_key_)
-                    {
-                        if(BOOST_JSON_UNLIKELY(
-                            ! h.on_key_part(temp, ec_)))
-                            return result::fail;
-                    }
-                    else
-                    {
-                        if(BOOST_JSON_UNLIKELY(
-                            ! h.on_string_part(temp, ec_)))
-                            return result::fail;
-                    }
+                    if(BOOST_JSON_UNLIKELY(
+                        ! (h.*partial_handler)(temp, ec_)))
+                        return result::fail;
                     temp.clear();
                     cs.clip(temp.max_size());
                 }
@@ -1633,18 +1579,9 @@ do_str3:
         if(BOOST_JSON_LIKELY(
             ! temp.empty()))
         {
-            if(is_key_)
-            {
-                if(BOOST_JSON_UNLIKELY(
-                    ! h.on_key_part(temp, ec_)))
-                    return result::fail;
-            }
-            else
-            {
-                if(BOOST_JSON_UNLIKELY(
-                    ! h.on_string_part(temp, ec_)))
-                    return result::fail;
-            }
+            if(BOOST_JSON_UNLIKELY(
+                ! (h.*partial_handler)(temp, ec_)))
+                return result::fail;
             temp.clear();
         }
         cs.clip(temp.max_size());
@@ -1873,10 +1810,10 @@ do_com6:
         {
             if (BOOST_JSON_LIKELY(*cs == '\x22')) // '"'
             {
-                is_key_ = true;
 do_obj2:
                 const result r = 
-                    parse_string<StackEmpty, AllowInvalid>(h, cs);
+                    parse_string<StackEmpty, true,
+                        AllowInvalid>(h, cs);
                 if (BOOST_JSON_UNLIKELY(r))
                     return maybe_suspend(r, state::obj2);
             }
@@ -2665,7 +2602,6 @@ write_some(
     {
         // first time
         depth_ = 0;
-        is_key_ = false;
         if(BOOST_JSON_UNLIKELY(
             ! h.on_document_begin(ec_)))
         {
