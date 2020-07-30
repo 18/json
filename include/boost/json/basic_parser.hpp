@@ -1943,7 +1943,7 @@ auto
 basic_parser::
 parse_number(
     Handler& h,
-    const_stream& cs0) ->
+    const_stream& cs) ->
         result
 {
     // only one of these will be true if we are not resuming
@@ -1954,7 +1954,6 @@ parse_number(
     constexpr bool zero_first = First == '0';
     constexpr bool nonzero_first = First == '+';
     number num;
-    detail::local_const_stream cs(cs0);
     if(StackEmpty || st_.empty())
     {
         num.bias = 0;
@@ -1970,6 +1969,11 @@ parse_number(
         if (negative)
             ++cs;
         num.neg = negative;
+
+        num.neg = negative;
+        num.frac = false;
+        num.exp = 0;
+        num.bias = 0;
 
         // fast path
         if( cs.remain() >= 16 + 1 + 16 ) // digits . digits
@@ -2044,6 +2048,7 @@ parse_number(
             num.mant = detail::parse_unsigned( num.mant, cs.data(), n2 );
 
             BOOST_ASSERT(num.bias == 0);
+
             num.bias -= n2;
 
             cs.skip( n2 );
