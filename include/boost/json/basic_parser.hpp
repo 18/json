@@ -469,9 +469,94 @@ validate_utf8(const_stream& cs) ->
         2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 3, 3, 
         5, 6, 6, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
     };
-
     unsigned char c;
-    if(! StackEmpty && ! st_.empty())
+    if(StackEmpty || st_.empty())
+    {
+        // fast path
+        if (BOOST_JSON_LIKELY(
+            cs.remain() >= 4))
+        {
+            BOOST_ASSERT(static_cast<
+                unsigned char>(*cs) > 0x7F);
+            uint32_t v;
+            std::memcpy(&v, cs.data(), 4);
+#ifdef BOOST_JSON_BIG_ENDIAN
+            v = (((v & 0xFF000000) >> 24) |
+            ((v & 0x00FF0000) >> 8) |
+            ((v & 0x0000FF00) << 8) |
+            ((v & 0x000000FF) << 24));
+#endif
+            switch(first[v & 0x0000007F])
+            {
+            // 2 bytes, second byte [80, BF]
+            case 1:
+                if(BOOST_JSON_LIKELY(
+                    (v & 0x0000C000) == 0x00008000))
+                {
+                    cs.skip(2);
+                    return result::ok;
+                }
+                break;
+            // 3 bytes, second byte [A0, BF]
+            case 2:
+                if(BOOST_JSON_LIKELY(
+                    (v & 0x00C0E000) == 0x0080A000))
+                {
+                    cs.skip(3);
+                    return result::ok;
+                }
+                break;
+            // 3 bytes, second byte [80, BF]
+            case 3:
+                if(BOOST_JSON_LIKELY(
+                    (v & 0x00C0C000) == 0x00808000))
+                {
+                    cs.skip(3);
+                    return result::ok;
+                }
+                break;
+            // 3 bytes, second byte [80, 9F]
+            case 4:
+                if(BOOST_JSON_LIKELY(
+                    (v & 0x00C0E000) == 0x00808000))
+                {
+                    cs.skip(3);
+                    return result::ok;
+                }
+                break;
+            // 4 bytes, second byte [90, BF]
+            case 5:
+                if(BOOST_JSON_LIKELY(
+                    (v & 0xC0C0FF00) + 
+                    0x7F7F7000 <= 0x00002F00))
+                {
+                    cs.skip(4);
+                    return result::ok;
+                }
+                break;
+            // 4 bytes, second byte [80, BF]
+            case 6:
+                if(BOOST_JSON_LIKELY(
+                    (v & 0xC0C0C000) == 0x80808000))
+                {
+                     cs.skip(4);
+                     return result::ok;
+                }
+                break;
+            // 4 bytes, second byte [80, 8F]
+            case 7:
+                if(BOOST_JSON_LIKELY(
+                    (v & 0xC0C0F000) == 0x80808000))
+                {
+                    cs.skip(4);
+                    return result::ok;
+                }
+                break;
+            }
+            return report_error(error::syntax);
+        }
+    }
+    else
     {
         state st;
         st_.pop(st);
@@ -496,236 +581,151 @@ validate_utf8(const_stream& cs) ->
         case state::utf16: goto do_utf16;
         }
     }
-    // fast path
-    if (BOOST_JSON_LIKELY(
-        cs.remain() >= 4))
-    {
-        BOOST_ASSERT(static_cast<
-            unsigned char>(*cs) > 0x7F);
-        uint32_t v;
-        std::memcpy(&v, cs.data(), 4);
-#ifdef BOOST_JSON_BIG_ENDIAN
-        v = (((v & 0xFF000000) >> 24) |
-        ((v & 0x00FF0000) >> 8) |
-        ((v & 0x0000FF00) << 8) |
-        ((v & 0x000000FF) << 24));
-#endif
-        switch(first[v & 0x0000007F])
-        {
-        // 2 bytes, second byte [80, BF]
-        case 1:
-            if(BOOST_JSON_LIKELY(
-                (v & 0x0000C000) == 0x00008000))
-            {
-                cs.skip(2);
-                return result::ok;
-            }
-            break;
-        // 3 bytes, second byte [A0, BF]
-        case 2:
-            if(BOOST_JSON_LIKELY(
-                (v & 0x00C0E000) == 0x0080A000))
-            {
-                cs.skip(3);
-                return result::ok;
-            }
-            break;
-        // 3 bytes, second byte [80, BF]
-        case 3:
-            if(BOOST_JSON_LIKELY(
-                (v & 0x00C0C000) == 0x00808000))
-            {
-                cs.skip(3);
-                return result::ok;
-            }
-            break;
-        // 3 bytes, second byte [80, 9F]
-        case 4:
-            if(BOOST_JSON_LIKELY(
-                (v & 0x00C0E000) == 0x00808000))
-            {
-                cs.skip(3);
-                return result::ok;
-            }
-            break;
-        // 4 bytes, second byte [90, BF]
-        case 5:
-            if(BOOST_JSON_LIKELY(
-                (v & 0xC0C0FF00) + 
-                0x7F7F7000 <= 0x00002F00))
-            {
-                cs.skip(4);
-                return result::ok;
-            }
-            break;
-        // 4 bytes, second byte [80, BF]
-        case 6:
-            if(BOOST_JSON_LIKELY(
-                (v & 0xC0C0C000) == 0x80808000))
-            {
-                 cs.skip(4);
-                 return result::ok;
-            }
-            break;
-        // 4 bytes, second byte [80, 8F]
-        case 7:
-            if(BOOST_JSON_LIKELY(
-                (v & 0xC0C0F000) == 0x80808000))
-            {
-                cs.skip(4);
-                return result::ok;
-            }
-            break;
-        }
-        return report_error(error::syntax);
-    }
-    else
-    {
-        c = static_cast<unsigned char>(*cs);
-        BOOST_ASSERT(c > 0x7F);
-        ++cs;
-        switch(first[c & 0x7F])
-        {
-        // 2 bytes
-        case 1:
-do_utf1:
-            if(BOOST_JSON_UNLIKELY(! cs))
-                return maybe_suspend(state::utf1);
-            if(BOOST_JSON_UNLIKELY(
-                (*cs & 0xC0) != 0x80))
-                break;
-            ++cs;
-            return result::ok;
-                
-        // 3 bytes, second byte [A0, BF]
-        case 2:
-do_utf2:
-            if(BOOST_JSON_UNLIKELY(! cs))
-                return maybe_suspend(state::utf2);
-            if(BOOST_JSON_UNLIKELY(
-                (*cs & 0xE0) != 0xA0))
-                break;
-            ++cs;
-do_utf3:
-            if(BOOST_JSON_UNLIKELY(! cs))
-                return maybe_suspend(state::utf3);
-            if(BOOST_JSON_UNLIKELY(
-                (*cs & 0xC0) != 0x80))
-                break;
-            ++cs;
-            return result::ok;
-                
-        // 3 bytes, second byte [80, BF]
-        case 3:
-do_utf4:
-            if(BOOST_JSON_UNLIKELY(! cs))
-                return maybe_suspend(state::utf4);
-            if(BOOST_JSON_UNLIKELY(
-                (*cs & 0xC0) != 0x80))
-                break;
-            ++cs;
-do_utf5:
-            if(BOOST_JSON_UNLIKELY(! cs))
-                return maybe_suspend(state::utf5);
-            if(BOOST_JSON_UNLIKELY(
-                (*cs & 0xC0) != 0x80))
-                break;
-            ++cs;
-            return result::ok;
-                
-        // 3 bytes, second byte [80, 9F]
-        case 4:
-do_utf6:
-            if(BOOST_JSON_UNLIKELY(! cs))
-                return maybe_suspend(state::utf6);
-            if(BOOST_JSON_UNLIKELY(
-                (*cs & 0xE0) != 0x80))
-                break;
-            ++cs;
-do_utf7:
-            if(BOOST_JSON_UNLIKELY(! cs))
-                return maybe_suspend(state::utf7);
-            if(BOOST_JSON_UNLIKELY(
-                (*cs & 0xC0) != 0x80))
-                break;
-            ++cs;
-            return result::ok;
 
-        // 4 bytes, second byte [90, BF]
-        case 5:
+    c = static_cast<unsigned char>(*cs);
+    BOOST_ASSERT(c > 0x7F);
+    ++cs;
+    switch(first[c & 0x7F])
+    {
+    // 2 bytes
+    case 1:
+do_utf1:
+        if(BOOST_JSON_UNLIKELY(! cs))
+            return maybe_suspend(state::utf1);
+        if(BOOST_JSON_UNLIKELY(
+            (*cs & 0xC0) != 0x80))
+            break;
+        ++cs;
+        return result::ok;
+                
+    // 3 bytes, second byte [A0, BF]
+    case 2:
+do_utf2:
+        if(BOOST_JSON_UNLIKELY(! cs))
+            return maybe_suspend(state::utf2);
+        if(BOOST_JSON_UNLIKELY(
+            (*cs & 0xE0) != 0xA0))
+            break;
+        ++cs;
+do_utf3:
+        if(BOOST_JSON_UNLIKELY(! cs))
+            return maybe_suspend(state::utf3);
+        if(BOOST_JSON_UNLIKELY(
+            (*cs & 0xC0) != 0x80))
+            break;
+        ++cs;
+        return result::ok;
+                
+    // 3 bytes, second byte [80, BF]
+    case 3:
+do_utf4:
+        if(BOOST_JSON_UNLIKELY(! cs))
+            return maybe_suspend(state::utf4);
+        if(BOOST_JSON_UNLIKELY(
+            (*cs & 0xC0) != 0x80))
+            break;
+        ++cs;
+do_utf5:
+        if(BOOST_JSON_UNLIKELY(! cs))
+            return maybe_suspend(state::utf5);
+        if(BOOST_JSON_UNLIKELY(
+            (*cs & 0xC0) != 0x80))
+            break;
+        ++cs;
+        return result::ok;
+                
+    // 3 bytes, second byte [80, 9F]
+    case 4:
+do_utf6:
+        if(BOOST_JSON_UNLIKELY(! cs))
+            return maybe_suspend(state::utf6);
+        if(BOOST_JSON_UNLIKELY(
+            (*cs & 0xE0) != 0x80))
+            break;
+        ++cs;
+do_utf7:
+        if(BOOST_JSON_UNLIKELY(! cs))
+            return maybe_suspend(state::utf7);
+        if(BOOST_JSON_UNLIKELY(
+            (*cs & 0xC0) != 0x80))
+            break;
+        ++cs;
+        return result::ok;
+
+    // 4 bytes, second byte [90, BF]
+    case 5:
 do_utf8:
-            if(BOOST_JSON_UNLIKELY(! cs))
-                return maybe_suspend(state::utf8);
-            if(BOOST_JSON_UNLIKELY(
-                (*cs + 0x70) > 0x2F))
-                break;
-            ++cs;
+        if(BOOST_JSON_UNLIKELY(! cs))
+            return maybe_suspend(state::utf8);
+        if(BOOST_JSON_UNLIKELY(
+            (*cs + 0x70) > 0x2F))
+            break;
+        ++cs;
 do_utf9:
-            if(BOOST_JSON_UNLIKELY(! cs))
-                return maybe_suspend(state::utf9);
-            if(BOOST_JSON_UNLIKELY(
-                (*cs & 0xC0) != 0x80))
-                break;
-            ++cs;
+        if(BOOST_JSON_UNLIKELY(! cs))
+            return maybe_suspend(state::utf9);
+        if(BOOST_JSON_UNLIKELY(
+            (*cs & 0xC0) != 0x80))
+            break;
+        ++cs;
 do_utf10:
-            if(BOOST_JSON_UNLIKELY(! cs))
-                return maybe_suspend(state::utf10);
-            if(BOOST_JSON_UNLIKELY(
-                (*cs & 0xC0) != 0x80))
-                break;
-            ++cs;
-            return result::ok;
+        if(BOOST_JSON_UNLIKELY(! cs))
+            return maybe_suspend(state::utf10);
+        if(BOOST_JSON_UNLIKELY(
+            (*cs & 0xC0) != 0x80))
+            break;
+        ++cs;
+        return result::ok;
                 
-        // 4 bytes, second byte [80, BF]
-        case 6:
+    // 4 bytes, second byte [80, BF]
+    case 6:
 do_utf11:
-            if(BOOST_JSON_UNLIKELY(! cs))
-                return maybe_suspend(state::utf11);
-            if(BOOST_JSON_UNLIKELY(
-                (*cs & 0xC0) != 0x80))
-                break;
-            ++cs;
+        if(BOOST_JSON_UNLIKELY(! cs))
+            return maybe_suspend(state::utf11);
+        if(BOOST_JSON_UNLIKELY(
+            (*cs & 0xC0) != 0x80))
+            break;
+        ++cs;
 do_utf12:
-            if(BOOST_JSON_UNLIKELY(! cs))
-                return maybe_suspend(state::utf12);
-            if(BOOST_JSON_UNLIKELY(
-                (*cs & 0xC0) != 0x80))
-                break;
-            ++cs;
+        if(BOOST_JSON_UNLIKELY(! cs))
+            return maybe_suspend(state::utf12);
+        if(BOOST_JSON_UNLIKELY(
+            (*cs & 0xC0) != 0x80))
+            break;
+        ++cs;
 do_utf13:
-            if(BOOST_JSON_UNLIKELY(! cs))
-                return maybe_suspend(state::utf13);
-            if(BOOST_JSON_UNLIKELY(
-                (*cs & 0xC0) != 0x80))
-                break;
-            ++cs;
-            return result::ok;
+        if(BOOST_JSON_UNLIKELY(! cs))
+            return maybe_suspend(state::utf13);
+        if(BOOST_JSON_UNLIKELY(
+            (*cs & 0xC0) != 0x80))
+            break;
+        ++cs;
+        return result::ok;
                 
-        // 4 bytes, second byte [80, 8F]
-        case 7:
+    // 4 bytes, second byte [80, 8F]
+    case 7:
 do_utf14:
-            if(BOOST_JSON_UNLIKELY(! cs))
-                return maybe_suspend(state::utf14);
-            if(BOOST_JSON_UNLIKELY(
-                (*cs & 0xF0) != 0x80))
-                break;
-            ++cs;
+        if(BOOST_JSON_UNLIKELY(! cs))
+            return maybe_suspend(state::utf14);
+        if(BOOST_JSON_UNLIKELY(
+            (*cs & 0xF0) != 0x80))
+            break;
+        ++cs;
 do_utf15:
-            if(BOOST_JSON_UNLIKELY(! cs))
-                return maybe_suspend(state::utf15);
-            if(BOOST_JSON_UNLIKELY(
-                (*cs & 0xC0) != 0x80))
-                break;
-            ++cs;
+        if(BOOST_JSON_UNLIKELY(! cs))
+            return maybe_suspend(state::utf15);
+        if(BOOST_JSON_UNLIKELY(
+            (*cs & 0xC0) != 0x80))
+            break;
+        ++cs;
 do_utf16:
-            if(BOOST_JSON_UNLIKELY(! cs))
-                return maybe_suspend(state::utf16);
-            if(BOOST_JSON_UNLIKELY(
-                (*cs & 0xC0) != 0x80))
-                break;
-            ++cs;
-            return result::ok;
-        }
+        if(BOOST_JSON_UNLIKELY(! cs))
+            return maybe_suspend(state::utf16);
+        if(BOOST_JSON_UNLIKELY(
+            (*cs & 0xC0) != 0x80))
+            break;
+        ++cs;
+        return result::ok;
     }
     return report_error(error::syntax);
 }
@@ -980,7 +980,21 @@ parse_null(
     const_stream& cs) ->
         result
 {
-    if(! StackEmpty && ! st_.empty())
+    if(StackEmpty || st_.empty())
+    {
+        if(BOOST_JSON_LIKELY(cs.remain() >= 4))
+        {
+            if(BOOST_JSON_UNLIKELY(std::memcmp(
+                cs.data(), "null", 4) != 0))
+                return report_error(error::syntax);
+            if(BOOST_JSON_UNLIKELY(
+                ! h.on_null(ec_)))
+                return result::fail;
+            cs.skip(4);
+            return result::ok;
+        }
+    }
+    else
     {
         state st;
         st_.pop(st);
@@ -991,17 +1005,6 @@ parse_null(
         case state::nul2: goto do_nul2;
         case state::nul3: goto do_nul3;
         }
-    }
-    if(BOOST_JSON_LIKELY(cs.remain() >= 4))
-    {
-        if(BOOST_JSON_UNLIKELY(std::memcmp(
-            cs.data(), "null", 4) != 0))
-            return report_error(error::syntax);
-        if(BOOST_JSON_UNLIKELY(
-            ! h.on_null(ec_)))
-            return result::fail;
-        cs.skip(4);
-        return result::ok;
     }
     ++cs;
 do_nul1:
@@ -1039,7 +1042,21 @@ parse_true(
     const_stream& cs) ->
         result
 {
-    if(! StackEmpty && ! st_.empty())
+    if(StackEmpty || st_.empty())
+    {
+        if(BOOST_JSON_LIKELY(cs.remain() >= 4))
+        {
+            if(BOOST_JSON_UNLIKELY(std::memcmp(
+                cs.data(), "true", 4) != 0))
+                return report_error(error::syntax);
+            if(BOOST_JSON_UNLIKELY(
+                ! h.on_bool(true, ec_)))
+                return result::fail;
+            cs.skip(4);
+            return result::ok;
+        }
+    }
+    else
     {
         state st;
         st_.pop(st);
@@ -1050,17 +1067,6 @@ parse_true(
         case state::tru2: goto do_tru2;
         case state::tru3: goto do_tru3;
         }
-    }
-    if(BOOST_JSON_LIKELY(cs.remain() >= 4))
-    {
-        if(BOOST_JSON_UNLIKELY(std::memcmp(
-            cs.data(), "true", 4) != 0))
-            return report_error(error::syntax);
-        if(BOOST_JSON_UNLIKELY(
-            ! h.on_bool(true, ec_)))
-            return result::fail;
-        cs.skip(4);
-        return result::ok;
     }
     ++cs;
 do_tru1:
@@ -1098,7 +1104,21 @@ parse_false(
     const_stream& cs) ->
         result
 {
-    if(! StackEmpty && ! st_.empty())
+    if(StackEmpty || st_.empty())
+    {
+        if(BOOST_JSON_LIKELY(cs.remain() >= 5))
+        {
+            if(BOOST_JSON_UNLIKELY(std::memcmp(
+                cs.data() + 1, "alse", 4) != 0))
+                return report_error(error::expected_false);
+            if(BOOST_JSON_UNLIKELY(
+                ! h.on_bool(false, ec_)))
+                return result::fail;
+            cs.skip(5);
+            return result::ok;
+        }
+    }
+    else
     {
         state st;
         st_.pop(st);
@@ -1110,17 +1130,6 @@ parse_false(
         case state::fal3: goto do_fal3;
         case state::fal4: goto do_fal4;
         }
-    }
-    if(BOOST_JSON_LIKELY(cs.remain() >= 5))
-    {
-        if(BOOST_JSON_UNLIKELY(std::memcmp(
-            cs.data() + 1, "alse", 4) != 0))
-            return report_error(error::expected_false);
-        if(BOOST_JSON_UNLIKELY(
-            ! h.on_bool(false, ec_)))
-            return result::fail;
-        cs.skip(5);
-        return result::ok;
     }
     ++cs;
 do_fal1:
@@ -1951,6 +1960,108 @@ parse_number(
         num.bias = 0;
         num.exp = 0;
         num.frac = false;
+
+        //----------------------------------
+        //
+        // '-'
+        // leading minus sign
+        //
+        BOOST_ASSERT(cs);
+        if (negative)
+            ++cs;
+        num.neg = negative;
+
+        // fast path
+        if( cs.remain() >= 16 + 1 + 16 ) // digits . digits
+        {
+            int n1;
+
+            if( nonzero_first || 
+                (negative && *cs != '0') )
+            {
+                n1 = detail::count_digits( cs.data() );
+                BOOST_ASSERT(n1 >= 0 && n1 <= 16);
+
+                if( ! nonzero_first && n1 == 0 )
+                {
+                    // digit required
+                    return report_error(error::syntax);
+                }
+
+                num.mant = detail::parse_unsigned( 0, cs.data(), n1 );
+
+                cs.skip( n1 );
+
+                // integer or floating-point with 
+                // >= 16 leading digits
+                if( n1 == 16 )
+                {
+                    goto do_num2;
+                }
+            }
+            else
+            {
+                // 0. floating-point or 0e integer
+                num.mant = 0;
+                n1 = 0;
+                ++cs;
+            }
+
+            {
+                const char c = *cs;
+                if (c != '.')
+                {
+                    if ((c | 32) == 'e')
+                    {
+                        ++cs;
+                        goto do_exp1;
+                    }
+                    if (negative)
+                        num.mant = ~num.mant + 1;
+                    goto finish_signed;
+                }
+            }
+
+            // floating-point number
+
+            ++cs;
+
+            int n2 = detail::count_digits( cs.data() );
+            BOOST_ASSERT(n2 >= 0 && n2 <= 16);
+
+            if( n2 == 0 )
+            {
+                // digit required
+                return report_error(error::syntax);
+            }
+
+            // floating-point mantissa overflow
+            if( n1 + n2 >= 19 )
+            {
+                goto do_num4;
+            }
+
+            num.mant = detail::parse_unsigned( num.mant, cs.data(), n2 );
+
+            BOOST_ASSERT(num.bias == 0);
+            num.bias -= n2;
+
+            cs.skip( n2 );
+
+            char ch = *cs;
+
+            if( (ch | 32) == 'e' )
+            {
+                ++cs;
+                goto do_exp1;
+            }
+            else if( ch >= '0' && ch <= '9' )
+            {
+                goto do_num8;
+            }
+
+            goto finish_dub;
+        }
     }
     else
     {
@@ -1972,108 +2083,6 @@ parse_number(
         case state::exp2: goto do_exp2;
         case state::exp3: goto do_exp3;
         }
-    }
-
-    //----------------------------------
-    //
-    // '-'
-    // leading minus sign
-    //
-    BOOST_ASSERT(cs);
-    if (negative)
-        ++cs;
-    num.neg = negative;
-
-    // fast path
-    if( cs.remain() >= 16 + 1 + 16 ) // digits . digits
-    {
-        int n1;
-
-        if( nonzero_first || 
-            (negative && *cs != '0') )
-        {
-            n1 = detail::count_digits( cs.data() );
-            BOOST_ASSERT(n1 >= 0 && n1 <= 16);
-
-            if( ! nonzero_first && n1 == 0 )
-            {
-                // digit required
-                return report_error(error::syntax);
-            }
-
-            num.mant = detail::parse_unsigned( 0, cs.data(), n1 );
-
-            cs.skip( n1 );
-
-            // integer or floating-point with 
-            // >= 16 leading digits
-            if( n1 == 16 )
-            {
-                goto do_num2;
-            }
-        }
-        else
-        {
-            // 0. floating-point or 0e integer
-            num.mant = 0;
-            n1 = 0;
-            ++cs;
-        }
-
-        {
-            const char c = *cs;
-            if (c != '.')
-            {
-                if ((c | 32) == 'e')
-                {
-                    ++cs;
-                    goto do_exp1;
-                }
-                if (negative)
-                    num.mant = ~num.mant + 1;
-                goto finish_signed;
-            }
-        }
-
-        // floating-point number
-
-        ++cs;
-
-        int n2 = detail::count_digits( cs.data() );
-        BOOST_ASSERT(n2 >= 0 && n2 <= 16);
-
-        if( n2 == 0 )
-        {
-            // digit required
-            return report_error(error::syntax);
-        }
-
-        // floating-point mantissa overflow
-        if( n1 + n2 >= 19 )
-        {
-            goto do_num4;
-        }
-
-        num.mant = detail::parse_unsigned( num.mant, cs.data(), n2 );
-
-        BOOST_ASSERT(num.bias == 0);
-        num.bias -= n2;
-
-        cs.skip( n2 );
-
-        char ch = *cs;
-
-        if( (ch | 32) == 'e' )
-        {
-            ++cs;
-            goto do_exp1;
-        }
-        else if( ch >= '0' && ch <= '9' )
-        {
-            goto do_num8;
-        }
-
-        goto finish_dub;
     }
 
     //----------------------------------
