@@ -122,50 +122,50 @@ class basic_parser
 
     inline result report_error(error err) noexcept;
     template<typename Handler>
-    inline result report_error(Handler&, const_stream&) noexcept;
+    inline result report_error(const_stream&) noexcept;
 
     template<bool StackEmpty,
         bool ReturnValue, bool AllowTrailing, 
         bool AllowInvalid, class Handler>
-    result parse_comment(Handler& h, const_stream& cs);
+    result parse_comment(const_stream& cs);
     
     template<bool StackEmpty>
     result validate_utf8(const_stream& cs);
 
     template<bool StackEmpty, class Handler>
-    result parse_document(Handler& h, const_stream& cs);
+    result parse_document(const_stream& cs);
     
     template<bool StackEmpty, bool AllowComments,
         bool AllowTrailing, bool AllowInvalid, class Handler>
-    result parse_value(Handler& h, const_stream& cs);
+    result parse_value(const_stream& cs);
     
     template<bool StackEmpty, bool AllowComments,
         bool AllowTrailing, bool AllowInvalid, class Handler>
-    result resume_value(Handler& h, const_stream& cs);
+    result resume_value(const_stream& cs);
     
     template<bool StackEmpty, bool AllowComments,
         bool AllowTrailing, bool AllowInvalid, class Handler>
-    result parse_object(Handler& h, const_stream& cs);
+    result parse_object(const_stream& cs);
     
     template<bool StackEmpty, bool AllowComments,
         bool AllowTrailing, bool AllowInvalid, class Handler>
-    result parse_array(Handler& h, const_stream& cs);
+    result parse_array(const_stream& cs);
     
     template<bool StackEmpty, class Handler>
-    result parse_null(Handler& h, const_stream& cs);
+    result parse_null(const_stream& cs);
     
     template<bool StackEmpty, class Handler>
-    result parse_true(Handler& h, const_stream& cs);
+    result parse_true(const_stream& cs);
     
     template<bool StackEmpty, class Handler>
-    result parse_false(Handler& h, const_stream& cs);
+    result parse_false(const_stream& cs);
     
     template<bool StackEmpty, bool IsKey,
         bool AllowInvalid, class Handler>
-    result parse_string(Handler& h, const_stream& cs);
+    result parse_string(const_stream& cs);
     
     template<bool StackEmpty, char First, class Handler>
-    result parse_number(Handler& h, const_stream& cs);
+    result parse_number(const_stream& cs);
 
 public:
      /** Default constructor.
