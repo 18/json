@@ -1671,19 +1671,7 @@ parse_object(
     const char* p)
 {
     detail::const_stream_wrapper cs(p, end_);
-    if(StackEmpty || st_.empty())
-    {
-        BOOST_ASSERT(*cs == '{');
-        ++depth_;
-        if(BOOST_JSON_UNLIKELY(
-            depth_ > max_depth_))
-            return fail(+cs, error::too_deep);
-        if(BOOST_JSON_UNLIKELY(
-            ! static_cast<Handler&>(*this).on_object_begin(ec_)))
-            return fail(+cs);
-        ++cs;
-    }
-    else
+    if(! StackEmpty && ! st_.empty())
     {
         state st;
         st_.pop(st);
@@ -1703,6 +1691,15 @@ parse_object(
         case state::com9: goto do_com9;
         }
     }
+    BOOST_ASSERT(*cs == '{');
+    ++depth_;
+    if(BOOST_JSON_UNLIKELY(
+        depth_ > max_depth_))
+        return fail(+cs, error::too_deep);
+    if(BOOST_JSON_UNLIKELY(
+        ! static_cast<Handler&>(*this).on_object_begin(ec_)))
+        return fail(+cs);
+    ++cs;
 do_obj1:
     cs = detail::count_whitespace(+cs, ~cs);
     if(BOOST_JSON_UNLIKELY(! cs))
@@ -1720,27 +1717,24 @@ do_com6:
         }
         for(;;)
         {
-            if(BOOST_JSON_LIKELY(*cs == '\x22')) // '"'
+            if(BOOST_JSON_UNLIKELY(*cs != '\x22')) // '"'
             {
-do_obj2:
-                cs = parse_string<StackEmpty, true,
-                    AllowInvalid, Handler>(+cs);
-                if(BOOST_JSON_UNLIKELY(cs.null()))
-                    return propagate(state::obj2);
-            }
-            else if(AllowComments && *cs == '/')
-            {
+                if(AllowComments && *cs == '/')
+                {
 do_com7:
-                cs = parse_comment<StackEmpty, false, 
-                    AllowTrailing, AllowInvalid, Handler>(+cs);
-                if(BOOST_JSON_UNLIKELY(cs.null()))
-                    return propagate(state::com7);
-                goto do_obj7;
-            }
-            else
-            {
+                    cs = parse_comment<StackEmpty, false, 
+                        AllowTrailing, AllowInvalid, Handler>(+cs);
+                    if(BOOST_JSON_UNLIKELY(cs.null()))
+                        return propagate(state::com7);
+                    goto do_obj7;
+                }
                 return fail(+cs, error::syntax);
             }
+do_obj2:
+            cs = parse_string<StackEmpty, true,
+                AllowInvalid, Handler>(+cs);
+            if(BOOST_JSON_UNLIKELY(cs.null()))
+                return propagate(state::obj2);
 do_obj3:
             cs = detail::count_whitespace(+cs, ~cs);
             if(BOOST_JSON_UNLIKELY(! cs))
@@ -1772,14 +1766,19 @@ do_obj6:
             cs = detail::count_whitespace(+cs, ~cs);
             if(BOOST_JSON_UNLIKELY(! cs))
                 return partial_if_more(+cs, state::obj6);
-            // KRYSTIAN NOTE: do not place an optimization
-            // hint here, it will give worse codegen for
-            // the nominal return path
-            if(*cs != ',')
+            if(BOOST_JSON_LIKELY(*cs == ','))
             {
-                if(BOOST_JSON_LIKELY(*cs == '}'))
-                    break;
-                else if(AllowComments && *cs == '/')
+                ++cs;
+do_obj7:
+                cs = detail::count_whitespace(+cs, ~cs);
+                if(BOOST_JSON_UNLIKELY(! cs))
+                    return partial_if_more(+cs, state::obj7);
+                if(! AllowTrailing || *cs != '}')
+                        continue;
+            }
+            else if(BOOST_JSON_UNLIKELY(*cs != '}'))
+            {
+                if(AllowComments && *cs == '/')
                 {
 do_com9:
                     cs = parse_comment<StackEmpty, false, 
@@ -1790,13 +1789,7 @@ do_com9:
                 }
                 return fail(+cs, error::syntax);
             }
-            ++cs;
-do_obj7:
-            cs = detail::count_whitespace(+cs, ~cs);
-            if(BOOST_JSON_UNLIKELY(! cs))
-                return partial_if_more(+cs, state::obj7);
-            if(AllowTrailing && *cs == '}')
-                break;
+            break;
         }
     }
     if(BOOST_JSON_UNLIKELY(
@@ -1821,19 +1814,7 @@ parse_array(
     const char* p)        
 {
     detail::const_stream_wrapper cs(p, end_);
-    if(StackEmpty || st_.empty())
-    {
-        BOOST_ASSERT(*cs == '[');
-        ++depth_;
-        if(BOOST_JSON_UNLIKELY(
-            depth_ > max_depth_))
-            return fail(+cs, error::too_deep);
-        if(BOOST_JSON_UNLIKELY(
-            ! static_cast<Handler&>(*this).on_array_begin(ec_)))
-            return fail(+cs);
-        ++cs;
-    }
-    else
+    if(! StackEmpty && ! st_.empty())
     {
         state st;
         st_.pop(st);
@@ -1848,6 +1829,15 @@ parse_array(
         case state::com11: goto do_com11;
         }
     }
+    BOOST_ASSERT(*cs == '[');
+    ++depth_;
+    if(BOOST_JSON_UNLIKELY(
+        depth_ > max_depth_))
+        return fail(+cs, error::too_deep);
+    if(BOOST_JSON_UNLIKELY(
+        ! static_cast<Handler&>(*this).on_array_begin(ec_)))
+        return fail(+cs);
+    ++cs;
 do_arr1:
     cs = detail::count_whitespace(+cs, ~cs);
     if(BOOST_JSON_UNLIKELY(! cs))
@@ -1874,14 +1864,19 @@ do_arr3:
             cs = detail::count_whitespace(+cs, ~cs);
             if(BOOST_JSON_UNLIKELY(! cs))
                 return partial_if_more(+cs, state::arr3);
-            // KRYSTIAN NOTE: do not place an optimization
-            // hint here, it will give worse codegen for
-            // the nominal return path
-            if(*cs != ',')
+            if(BOOST_JSON_LIKELY(*cs == ','))
             {
-                if(BOOST_JSON_LIKELY(*cs == ']'))
-                    break;
-                else if(AllowComments && *cs == '/')
+                ++cs;
+do_arr4:
+                cs = detail::count_whitespace(+cs, ~cs);
+                if(BOOST_JSON_UNLIKELY(! cs))
+                    return partial_if_more(+cs, state::arr4);
+                if(! AllowTrailing || *cs != ']')
+                    continue;
+            }
+            else if(BOOST_JSON_UNLIKELY(*cs != ']'))
+            {
+                if(AllowComments && *cs == '/')
                 {
 do_com11:
                     cs = parse_comment<StackEmpty, false, 
@@ -1892,13 +1887,7 @@ do_com11:
                 }
                 return fail(+cs, error::syntax);
             }
-            ++cs;
-do_arr4:
-            cs = detail::count_whitespace(+cs, ~cs);
-            if(BOOST_JSON_UNLIKELY(! cs))
-                return partial_if_more(+cs, state::arr4);
-            if(AllowTrailing && *cs == ']')
-                break;
+            break;
         }
     }
     if(BOOST_JSON_UNLIKELY(
