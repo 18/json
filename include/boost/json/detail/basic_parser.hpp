@@ -82,13 +82,6 @@ class basic_parser
     enum class state : char;
     using const_stream = detail::const_stream;
 
-    enum result
-    {
-        ok = 0,
-        fail,
-        partial
-    };
-
     struct number
     {
         uint64_t mant;
@@ -108,64 +101,101 @@ class basic_parser
     bool more_; // false for final buffer
     bool complete_ = false; // true on complete parse
     parse_options opt_;
+    const char* end_;
+    const char* stopped_;
 
     inline static bool is_control(char c) noexcept;
     inline static char hex_digit(char c) noexcept;
-    inline bool skip_white(const_stream& cs);
-
+    
     inline void reserve();
-    inline result suspend(state st);
-    inline result suspend(state st, number const& num);
-    inline result maybe_suspend(state st);
-    inline result maybe_suspend(state st, const number& num);
-    inline result maybe_suspend(result r, state st);
 
-    inline result report_error(error err) noexcept;
-    template<typename Handler>
-    inline result report_error(const_stream&) noexcept;
+    inline
+    std::nullptr_t
+    propagate(state st);
+
+    inline
+    std::nullptr_t
+    fail(const char* p) noexcept;
+
+    inline
+    std::nullptr_t
+    fail(
+        const char* p, 
+        error err) noexcept;
+
+    inline
+    std::nullptr_t
+    partial_if_more(
+        const char* p, 
+        state st);
+
+    inline
+    std::nullptr_t
+    partial_if_more(
+        const char* p,
+        state st,
+        const number& num);
+
+    inline
+    std::nullptr_t
+    partial(
+        const char* p,
+        state st);
+
+    inline
+    std::nullptr_t
+    partial(
+        const char* p,
+        state st,
+        const number& num);
+
+    inline
+    const char*
+    syntax_error(
+        const char* p);
 
     template<bool StackEmpty,
         bool ReturnValue, bool AllowTrailing, 
         bool AllowInvalid, class Handler>
-    result parse_comment(const_stream& cs);
+    const char* parse_comment(const char* p);
     
     template<bool StackEmpty>
-    result validate_utf8(const_stream& cs);
+    const char* validate_utf8(const char* p, const char* end);
 
     template<bool StackEmpty, class Handler>
-    result parse_document(const_stream& cs);
+    const char* parse_document(const char* p);
     
     template<bool StackEmpty, bool AllowComments,
         bool AllowTrailing, bool AllowInvalid, class Handler>
-    result parse_value(const_stream& cs);
+    const char* parse_value(const char* p);
     
     template<bool StackEmpty, bool AllowComments,
         bool AllowTrailing, bool AllowInvalid, class Handler>
-    result resume_value(const_stream& cs);
+    const char* resume_value(const char* p);
     
     template<bool StackEmpty, bool AllowComments,
         bool AllowTrailing, bool AllowInvalid, class Handler>
-    result parse_object(const_stream& cs);
+    const char* parse_object(const char* p);
     
     template<bool StackEmpty, bool AllowComments,
         bool AllowTrailing, bool AllowInvalid, class Handler>
-    result parse_array(const_stream& cs);
+    const char* parse_array(const char* p);
     
     template<bool StackEmpty, class Handler>
-    result parse_null(const_stream& cs);
+    const char* parse_null(const char* p);
     
     template<bool StackEmpty, class Handler>
-    result parse_true(const_stream& cs);
+    const char* parse_true(const char* p);
     
     template<bool StackEmpty, class Handler>
-    result parse_false(const_stream& cs);
+    const char* parse_false(const char* p);
     
     template<bool StackEmpty, bool IsKey,
         bool AllowInvalid, class Handler>
-    result parse_string(const_stream& cs);
+    const char* parse_string(const char* p);
     
     template<bool StackEmpty, char First, class Handler>
-    result parse_number(const_stream& cs);
+    const char* parse_number(const char* p);
 
 public:
      /** Default constructor.
