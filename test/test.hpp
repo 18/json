@@ -142,9 +142,10 @@ struct unique_resource
 
 // The null parser discards all the data
 
-class null_parser : public basic_parser
+class null_parser 
+    : public basic_parser<null_parser>
 {
-    friend class boost::json::basic_parser;
+    friend class basic_parser;
 
     bool on_document_begin( error_code& ) { return true; }
     bool on_document_end( error_code& ) { return true; }
@@ -180,7 +181,7 @@ public:
     {
         auto const n =
             basic_parser::write_some(
-            *this, false, data, size, ec);
+                false, data, size, ec);
         if(! ec && n < size)
             ec = error::extra_data;
         return n;
@@ -189,7 +190,8 @@ public:
 
 //----------------------------------------------------------
 
-class fail_parser : public basic_parser
+class fail_parser 
+    : public basic_parser<fail_parser>
 {
     friend class basic_parser;
 
@@ -359,7 +361,7 @@ public:
         error_code& ec)
     {
         return basic_parser::write_some(
-            *this, more, data, size, ec);
+            more, data, size, ec);
     }
 
     std::size_t
@@ -371,7 +373,7 @@ public:
     {
         auto const n = 
             basic_parser::write_some(
-                *this, more, data, size, ec);
+                more, data, size, ec);
         if(! ec && n < size)
             ec = error::extra_data;
         return n;
@@ -391,7 +393,8 @@ struct test_exception
 };
 
 // Exercises every exception path
-class throw_parser : public basic_parser
+class throw_parser 
+    : public basic_parser<throw_parser>
 {
     friend class basic_parser;
     std::size_t n_ = std::size_t(-1);
@@ -560,7 +563,7 @@ public:
     {
         auto const n =
             basic_parser::write_some(
-                *this, more, data, size, ec);
+                more, data, size, ec);
         if(! ec && n < size)
             ec = error::extra_data;
         return n;

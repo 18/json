@@ -77,9 +77,39 @@ namespace json {
 
     @see @ref parse, @ref parser
 */
+template<class Handler>
 class basic_parser
 {
-    enum class state : char;
+    // KRYSTIAN NOTE: some compilers (e.g. msvc)
+    // don't permit this to be defined outside the
+    // class template, even though the standard does
+    enum class state : char
+    {
+        doc1,  doc2,  doc3,
+        com1,  com2,  com3,
+        com4,  com5,  com6, 
+        com7,  com8,  com9, 
+        com10, com11, com12,
+        nul1,  nul2,  nul3,
+        tru1,  tru2,  tru3,
+        fal1,  fal2,  fal3,  fal4,
+        str1,  str2,  str3,  str4,
+        str5,  str6,  str7,
+        sur1,  sur2,  sur3,
+        sur4,  sur5,  sur6,
+        utf1,  utf2,  utf3, 
+        utf4,  utf5,  utf6,
+        utf7,  utf8,  utf9, 
+        utf10, utf11, utf12, 
+        utf13, utf14, utf15, 
+        utf16, utf17, utf18,
+        obj1,  obj2,  obj3,  obj4,
+        obj5,  obj6,  obj7,
+        arr1,  arr2,  arr3,  arr4,
+        num1,  num2,  num3,  num4,
+        num5,  num6,  num7,  num8,
+        exp1,  exp2,  exp3
+    };
 
     struct number
     {
@@ -101,38 +131,30 @@ class basic_parser
     bool complete_ = false; // true on complete parse
     const char* end_;
     parse_options opt_;
-
-    inline static bool is_control(char c) noexcept;
-    inline static char hex_digit(char c) noexcept;
     
-    inline void reserve();
+    void reserve();
 
     BOOST_NOINLINE
-    inline
     std::nullptr_t
     propagate(state st);
 
     BOOST_NOINLINE
-    inline
     std::nullptr_t
     fail(const char* p) noexcept;
 
     BOOST_NOINLINE
-    inline
     std::nullptr_t
     fail(
         const char* p, 
         error err) noexcept;
 
     BOOST_NOINLINE
-    inline
     std::nullptr_t
     partial_if_more(
         const char* p, 
         state st);
 
     BOOST_NOINLINE
-    inline
     std::nullptr_t
     partial_if_more(
         const char* p,
@@ -140,70 +162,68 @@ class basic_parser
         const number& num);
 
     BOOST_NOINLINE
-    inline
     std::nullptr_t
     partial(
         const char* p,
         state st);
 
     BOOST_NOINLINE
-    inline
     std::nullptr_t
     partial(
         const char* p,
         state st,
         const number& num);
 
-    template<class Handler>
     BOOST_NOINLINE
-    inline
     const char*
     syntax_error(
-        Handler&,
         const char* p);
+
+    Handler&
+    handler() noexcept;
 
     template<bool StackEmpty>
     const char* validate_utf8(const char* p, const char* end);
     
     template<bool StackEmpty, bool ReturnValue,
         bool Terminal, bool AllowTrailing, 
-        bool AllowInvalid, class Handler>
-    const char* parse_comment(Handler& h, const char* p);
+        bool AllowInvalid>
+    const char* parse_comment(const char* p);
 
-    template<bool StackEmpty, class Handler>
-    const char* parse_document(Handler& h, const char* p);
+    template<bool StackEmpty>
+    const char* parse_document(const char* p);
     
     template<bool StackEmpty, bool AllowComments,
-        bool AllowTrailing, bool AllowInvalid, class Handler>
-    const char* parse_value(Handler& h, const char* p);
+        bool AllowTrailing, bool AllowInvalid>
+    const char* parse_value(const char* p);
     
     template<bool StackEmpty, bool AllowComments,
-        bool AllowTrailing, bool AllowInvalid, class Handler>
-    const char* resume_value(Handler& h, const char* p);
+        bool AllowTrailing, bool AllowInvalid>
+    const char* resume_value(const char* p);
     
     template<bool StackEmpty, bool AllowComments,
-        bool AllowTrailing, bool AllowInvalid, class Handler>
-    const char* parse_object(Handler& h, const char* p);
+        bool AllowTrailing, bool AllowInvalid>
+    const char* parse_object(const char* p);
     
     template<bool StackEmpty, bool AllowComments,
-        bool AllowTrailing, bool AllowInvalid, class Handler>
-    const char* parse_array(Handler& h, const char* p);
+        bool AllowTrailing, bool AllowInvalid>
+    const char* parse_array(const char* p);
     
-    template<bool StackEmpty, class Handler>
-    const char* parse_null(Handler& h, const char* p);
+    template<bool StackEmpty>
+    const char* parse_null(const char* p);
     
-    template<bool StackEmpty, class Handler>
-    const char* parse_true(Handler& h, const char* p);
+    template<bool StackEmpty>
+    const char* parse_true(const char* p);
     
-    template<bool StackEmpty, class Handler>
-    const char* parse_false(Handler& h, const char* p);
+    template<bool StackEmpty>
+    const char* parse_false(const char* p);
     
     template<bool StackEmpty, bool IsKey,
-        bool AllowInvalid, class Handler>
-    const char* parse_string(Handler& h, const char* p);
+        bool AllowInvalid>
+    const char* parse_string(const char* p);
     
-    template<bool StackEmpty, char First, class Handler>
-    const char* parse_number(Handler& h, const char* p);
+    template<bool StackEmpty, char First>
+    const char* parse_number(const char* p);
 
 public:
      /** Default constructor.
@@ -418,10 +438,8 @@ protected:
         @return The number of characters successfully
         parsed, which may be smaller than `size`.
     */
-    template<class Handler>
     std::size_t
     write_some(
-        Handler& h,
         bool more,
         char const* data,
         std::size_t size,

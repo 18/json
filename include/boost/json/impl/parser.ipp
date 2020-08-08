@@ -227,7 +227,7 @@ write(
 {
     auto const n =
         basic_parser::write_some(
-            *this, true, data, size, ec);
+            true, data, size, ec);
     if(! ec && n < size)
         ec = error::extra_data;
     return n;
@@ -253,7 +253,7 @@ parser::
 finish(error_code& ec)
 {
     basic_parser::write_some(
-        *this, false, nullptr, 0, ec);
+        false, nullptr, 0, ec);
 }
 
 void

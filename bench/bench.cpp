@@ -387,7 +387,8 @@ public:
 
 class boost_null_impl : public any_impl
 {
-    struct null_parser : basic_parser
+    struct null_parser 
+        : basic_parser<null_parser>
     {
         friend class basic_parser;
 
@@ -421,7 +422,7 @@ class boost_null_impl : public any_impl
         {
             auto const n =
                 basic_parser::write_some(
-                    *this, false, data, size, ec);
+                    false, data, size, ec);
             if(! ec && n < size)
                 ec = error::extra_data;
             return n;

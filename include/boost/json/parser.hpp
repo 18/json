@@ -68,7 +68,8 @@ namespace json {
     allowing the parser to cheaply reuse this memory
     when parsing subsequent JSONs, improving performance.
 */
-class parser : public basic_parser
+class parser 
+    : public basic_parser<parser>
 {
     friend class basic_parser;
     enum class state : char;

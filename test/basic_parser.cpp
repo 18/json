@@ -887,7 +887,8 @@ public:
                 "/***    aaaa***/"
             };
 
-            class comment_parser : public basic_parser
+            class comment_parser : 
+                public basic_parser<comment_parser>
             {
                 friend class basic_parser;
 
@@ -932,7 +933,7 @@ public:
                 {
                     auto const n =
                         basic_parser::write_some(
-                        *this, false, data, size, ec);
+                            false, data, size, ec);
                     if(! ec && n < size)
                         ec = error::extra_data;
                     return n;
