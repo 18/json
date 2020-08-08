@@ -134,11 +134,6 @@ class basic_parser
     
     void reserve();
 
-    BOOST_NOINLINE
-    std::nullptr_t
-    propagate(state st);
-
-    BOOST_NOINLINE
     std::nullptr_t
     fail(const char* p) noexcept;
 
@@ -147,6 +142,10 @@ class basic_parser
     fail(
         const char* p, 
         error err) noexcept;
+    
+    BOOST_NOINLINE
+    std::nullptr_t
+    propagate(state st);
 
     BOOST_NOINLINE
     std::nullptr_t
