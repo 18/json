@@ -889,15 +889,18 @@ resume_value(
     case state::fal3: case state::fal4:
         return parse_false<StackEmpty>(p);
 
-    case state::str1: case state::str2:
-    case state::str3: case state::str4:
-    case state::str5: case state::str6:
-    case state::str7:
+    case state::str1: case state::utf17:
+        return parse_string<StackEmpty, 
+            false, AllowInvalid>(p);
+
+    case state::str2: case state::str3:
+    case state::str4: case state::str5: 
+    case state::str6: case state::str7:
     case state::sur1: case state::sur2:
     case state::sur3: case state::sur4:
     case state::sur5: case state::sur6:
-    case state::utf17: case state::utf18:
-        return parse_string<StackEmpty, 
+    case state::utf18:
+        return parse_escaped<StackEmpty, 
             false, AllowInvalid>(p);
 
     case state::arr1: case state::arr2:
@@ -1127,122 +1130,94 @@ basic_parser<Handler>::
 parse_string(
     const char* p)
 {
-    detail::const_clipped_stream cs(p, end_);
     constexpr auto on_full = IsKey ? 
         &Handler::on_key : &Handler::on_string;
     constexpr auto on_part = IsKey ? 
         &Handler::on_key_part : &Handler::on_string_part;
-    detail::buffer<BOOST_JSON_PARSER_BUFFER_SIZE> temp;
-    char const* start;
-    char c;
-    if(StackEmpty || st_.empty())
-    {
-        BOOST_ASSERT(*cs == '\x22'); // '"'
-        ++cs;
-        start = +cs;
-    }
-    else
+    detail::const_stream_wrapper cs(p, end_);
+    const char* start;
+    if(! StackEmpty && ! st_.empty())
     {
         start = +cs;
         state st;
         st_.pop(st);
-        if(st != state::str1)
+        switch(st)
         {
-            cs.clip(temp.max_size());
-            switch(st)
-            {
-            default:
-            case state::str2: goto do_str2;
-            case state::str3: goto do_str3;
-            case state::str4: goto do_str4;
-            case state::str5: goto do_str5;
-            case state::str6: goto do_str6;
-            case state::str7: goto do_str7;
-            case state::sur1: goto do_sur1;
-            case state::sur2: goto do_sur2;
-            case state::sur3: goto do_sur3;
-            case state::sur4: goto do_sur4;
-            case state::sur5: goto do_sur5;
-            case state::sur6: goto do_sur6;
-            case state::utf17: goto do_utf17;
-            case state::utf18: goto do_utf18;
-            }
+        default:
+        case state::str1: goto do_str1;
+        case state::utf17: goto do_utf17;
         }
     }
-
-    //----------------------------------
-    //
-    // zero-copy unescaped runs
-    //
-    if(AllowInvalid)
-        cs += detail::count_unescaped(
-            +cs, cs.remain());
-    else
-        cs += detail::count_valid_unescaped(
-            +cs, cs.remain());
+    BOOST_ASSERT(*cs == '\x22'); // '"'
+    ++cs;
+    start = +cs;
+do_str1:
+    cs += (AllowInvalid ? 
+        detail::count_unescaped :
+        detail::count_valid_unescaped)
+            (+cs, cs.remain());
     for(;;)
     {
-        if(BOOST_JSON_LIKELY(cs))
+        if(BOOST_JSON_UNLIKELY(! cs))
         {
-            c = *cs;
             if(BOOST_JSON_LIKELY(
-                c == '\x22')) // '"'
+                +cs > start))
             {
                 if(BOOST_JSON_UNLIKELY(
-                    ! (handler().*on_full)({start,
+                    ! (handler().*on_part)({start,
                         cs.used(start)}, ec_)))
                     return fail(+cs);
-                ++cs;
-                return +cs;
             }
-            else if(! AllowInvalid && 
-                (c & 0x80))
-            {
-do_utf17:
-                cs = validate_utf8<StackEmpty>(+cs, ~cs);
-                if(BOOST_JSON_UNLIKELY(cs.null()))
-                    return propagate(state::utf17);
-                continue;
-            }
-            else if(BOOST_JSON_LIKELY(
-                c == '\\'))
-            {
-                // flush unescaped run from input
-                if(BOOST_JSON_LIKELY(
-                    +cs > start))
-                {
-                    if(BOOST_JSON_UNLIKELY(
-                        ! (handler().*on_part)({start,
-                            cs.used(start)}, ec_)))
-                        return fail(+cs);
-                }
-                // Unescaped JSON is never larger than its escaped version.
-                // To efficiently process only what will fit in the temporary buffer,
-                // the size of the input stream is temporarily "clipped" to the size
-                // of the temporary buffer.
-                cs.clip(temp.max_size());
-                ++cs;
-                goto do_str3;
-            }
-            else if(BOOST_JSON_UNLIKELY(
-                detail::is_control(c)))
-                return fail(+cs, error::syntax);
-            ++cs;
-            continue;
-        }
-        if(BOOST_JSON_UNLIKELY(! more_))
             return partial_if_more(+cs, state::str1);
-        if(BOOST_JSON_LIKELY(
-            +cs > start))
+        }
+        if(BOOST_JSON_LIKELY(*cs == '\x22')) // '"'
         {
             if(BOOST_JSON_UNLIKELY(
-                ! (handler().*on_part)({start,
+                ! (handler().*on_full)({start,
                     cs.used(start)}, ec_)))
                 return fail(+cs);
+            ++cs;
+            return +cs;
         }
-        return partial(+cs, state::str1);
+        else if(! AllowInvalid && (*cs & 0x80))
+        {
+do_utf17:
+            cs = validate_utf8<StackEmpty>(+cs, ~cs);
+            if(BOOST_JSON_UNLIKELY(cs.null()))
+                return propagate(state::utf17);
+            continue;
+        }
+        else if(BOOST_JSON_LIKELY(*cs == '\\'))
+        {
+            // flush unescaped run from input
+            if(BOOST_JSON_LIKELY(
+                +cs > start))
+            {
+                if(BOOST_JSON_UNLIKELY(
+                    ! (handler().*on_part)({start,
+                        cs.used(start)}, ec_)))
+                    return fail(+cs);
+            }
+            return parse_escaped<StackEmpty, 
+                IsKey, AllowInvalid>(p);
+        }
+        else if(BOOST_JSON_UNLIKELY(
+            detail::is_control(*cs)))
+            return fail(+cs, error::syntax);
+        ++cs;
     }
+}
 
+template<class Handler>
+template<
+    bool StackEmpty, 
+    bool IsKey,
+    bool AllowInvalid>
+const char*
+basic_parser<Handler>::
+parse_escaped(
+    const char* p)
+{
     //---------------------------------------------------------------
     //
     // To handle escapes, a local temporary buffer accumulates
@@ -1256,14 +1231,216 @@ do_utf17:
     // as possible. Thus, when the first escape is encountered,
     // the algorithm attempts to fill the temporary buffer first.
     //
+    detail::const_clipped_stream cs(p, end_);
+    constexpr auto on_full = IsKey ? 
+        &Handler::on_key : &Handler::on_string;
+    constexpr auto on_part = IsKey ? 
+        &Handler::on_key_part : &Handler::on_string_part;
+    detail::buffer<BOOST_JSON_PARSER_BUFFER_SIZE> temp;
+    cs.clip(temp.max_size());
+    if(! StackEmpty && ! st_.empty())
+    {
+        state st;
+        st_.pop(st);
+        switch(st)
+        {
+        default:
+        case state::str2: goto do_str2;
+        case state::str3: goto do_str3;
+        case state::str4: goto do_str4;
+        case state::str5: goto do_str5;
+        case state::str6: goto do_str6;
+        case state::str7: goto do_str7;
+        case state::sur1: goto do_sur1;
+        case state::sur2: goto do_sur2;
+        case state::sur3: goto do_sur3;
+        case state::sur4: goto do_sur4;
+        case state::sur5: goto do_sur5;
+        case state::sur6: goto do_sur6;
+        case state::utf18: goto do_utf18;
+        }
+    }
+    BOOST_ASSERT(*cs == '\\');
+    ++cs;
+do_str3:
+    if(BOOST_JSON_LIKELY(! cs))
+    {
+        if(BOOST_JSON_LIKELY(
+            ! temp.empty()))
+        {
+            if(BOOST_JSON_UNLIKELY(
+                ! (handler().*on_part)(temp, ec_)))
+                return fail(+cs);
+            temp.clear();
+        }
+        cs.clip(temp.max_size());
+        if(BOOST_JSON_UNLIKELY(! cs))
+            return partial_if_more(+cs, state::str3);
+    }
+    switch(*cs)
+    {
+    case '\x22': // '"'
+        temp.push_back('\x22');
+        break;
+    case '\\':
+        temp.push_back('\\');
+        break;
+    case '/':
+        temp.push_back('/');
+        break;
+    case 'b':
+        temp.push_back('\x08');
+        break;
+    case 'f':
+        temp.push_back('\x0c');
+        break;
+    case 'n':
+        temp.push_back('\x0a');
+        break;
+    case 'r':
+        temp.push_back('\x0d');
+        break;
+    case 't':
+        temp.push_back('\x09');
+        break;
+    case 'u':
+        // utf16 escape
+        //
+        // fast path only when the buffer
+        // is large enough for 2 surrogates
+        if(BOOST_JSON_LIKELY(
+            cs.remain() >= 11))
+        {
+            int32_t d;
+            std::memcpy(&d, p + 1, 4);
+#ifdef BOOST_JSON_BIG_ENDIAN
+            int d1 = detail::hex_digit(
+                static_cast<unsigned char>(d >> 24));
+            int d2 = detail::hex_digit(
+                static_cast<unsigned char>(d >> 16));
+            int d3 = detail::hex_digit(
+                static_cast<unsigned char>(d >> 8));
+            int d4 = detail::hex_digit(
+                static_cast<unsigned char>(d));
+#else
+            int d4 = detail::hex_digit(
+                static_cast<unsigned char>(d >> 24));
+            int d3 = detail::hex_digit(
+                static_cast<unsigned char>(d >> 16));
+            int d2 = detail::hex_digit(
+                static_cast<unsigned char>(d >> 8));
+            int d1 = detail::hex_digit(
+                static_cast<unsigned char>(d));
+#endif
+            if(BOOST_JSON_UNLIKELY(
+                (d1 | d2 | d3 | d4) == -1))
+            {
+                if(d1 != -1)
+                    ++cs;
+                if(d2 != -1)
+                    ++cs;
+                if(d3 != -1)
+                    ++cs;
+                return fail(
+                    +cs, error::expected_hex_digit);
+            }
+            // 32 bit unicode scalar value
+            unsigned const u1 =
+                (d1 << 12) + (d2 << 8) +
+                (d3 << 4) + d4;
+            // valid unicode scalar values are
+            // [0, D7FF] and [E000, 10FFFF]
+            // values within this range are valid utf-8
+            // code points and invalid leading surrogates.
+            if(BOOST_JSON_LIKELY(
+                u1 < 0xd800 || u1 > 0xdfff))
+            {
+                cs += 5;
+                temp.append_utf8(u1);
+                goto do_str2;
+            }
+            if(u1 > 0xdbff)
+                return fail(
+                    +cs, error::illegal_leading_surrogate);
+            cs += 5;
+            if(BOOST_JSON_UNLIKELY(*cs != '\\'))
+                return fail(+cs, error::syntax);
+            ++cs;
+            if(BOOST_JSON_UNLIKELY(*cs != 'u'))
+                return fail(+cs, error::syntax);
+            ++cs;
+            std::memcpy(&d, +cs, 4);
+#ifdef BOOST_JSON_BIG_ENDIAN
+            d1 = detail::hex_digit(
+                static_cast<unsigned char>(d >> 24));
+            d2 = detail::hex_digit(
+                static_cast<unsigned char>(d >> 16));
+            d3 = detail::hex_digit(
+                static_cast<unsigned char>(d >> 8));
+            d4 = detail::hex_digit(
+                static_cast<unsigned char>(d));
+#else
+            d4 = detail::hex_digit(
+                static_cast<unsigned char>(d >> 24));
+            d3 = detail::hex_digit(
+                static_cast<unsigned char>(d >> 16));
+            d2 = detail::hex_digit(
+                static_cast<unsigned char>(d >> 8));
+            d1 = detail::hex_digit(
+                static_cast<unsigned char>(d));
+#endif
+            if(BOOST_JSON_UNLIKELY(
+                (d1 | d2 | d3 | d4) == -1))
+            {
+                if(d1 != -1)
+                    ++cs;
+                if(d2 != -1)
+                    ++cs;
+                if(d3 != -1)
+                    ++cs;
+                return fail(
+                    +cs, error::expected_hex_digit);
+            }
+            unsigned const u2 =
+                (d1 << 12) + (d2 << 8) +
+                (d3 << 4) + d4;
+            // valid trailing surrogates are [DC00, DFFF]
+            if(BOOST_JSON_UNLIKELY(
+                u2 < 0xdc00 || u2 > 0xdfff))
+                return fail(
+                    +cs, error::illegal_leading_surrogate);
+            cs += 4;
+            unsigned cp =
+                ((u1 - 0xd800) << 10) +
+                    (u2  - 0xdc00) +
+                    0x10000;
+            // utf-16 surrogate pair
+            temp.append_utf8(cp);
+            goto do_str2;
+        }
+        // flush
+        if(BOOST_JSON_LIKELY(
+            ! temp.empty()))
+        {
+            if(BOOST_JSON_UNLIKELY(
+                ! (handler().*on_part)(temp, ec_)))
+                return fail(+cs);
+            temp.clear();
+            cs.clip(temp.max_size());
+        }
+        ++cs;
+        goto do_str4;
+    default:
+        return fail(+cs, error::syntax);
+    }
+    ++cs;
 do_str2:
     for(;;)
     {
         if(BOOST_JSON_LIKELY(cs))
         { 
-            c = *cs;
             if(BOOST_JSON_LIKELY(
-                c == '\x22')) // '"'
+                *cs == '\x22')) // '"'
             {
                 if(BOOST_JSON_UNLIKELY(
                     ! (handler().*on_full)(temp, ec_)))
@@ -1272,25 +1449,25 @@ do_str2:
                 return +cs;
             }
             else if(! AllowInvalid &&
-                (c & 0x80))
+                (*cs & 0x80))
             {
 do_utf18:
-                start = +cs;
+                const char* const start = +cs;
                 cs = validate_utf8<StackEmpty>(+cs, ~cs);
                 if(BOOST_JSON_UNLIKELY(cs.null()))
                     return propagate(state::utf18);
                 temp.append(start, cs.used(start));
                 continue;
             }
-            else if(c == '\\')
+            else if(*cs == '\\')
             {
                 ++cs;
                 goto do_str3;
             }
             else if(BOOST_JSON_UNLIKELY(
-                detail::is_control(c)))
+                detail::is_control(*cs)))
                 return fail(+cs, error::syntax);
-            temp.push_back(c);
+            temp.push_back(*cs);
             ++cs;
             continue;
         }
@@ -1307,185 +1484,6 @@ do_utf18:
         if(BOOST_JSON_UNLIKELY(! cs))
             return partial_if_more(+cs, state::str2);
         continue;
-
-        // handle escaped character
-do_str3:
-        if(BOOST_JSON_LIKELY(cs))
-        {
-            switch(*cs)
-            {
-            case '\x22': // '"'
-                temp.push_back('\x22');
-                break;
-            case '\\':
-                temp.push_back('\\');
-                break;
-            case '/':
-                temp.push_back('/');
-                break;
-            case 'b':
-                temp.push_back('\x08');
-                break;
-            case 'f':
-                temp.push_back('\x0c');
-                break;
-            case 'n':
-                temp.push_back('\x0a');
-                break;
-            case 'r':
-                temp.push_back('\x0d');
-                break;
-            case 't':
-                temp.push_back('\x09');
-                break;
-            case 'u':
-                // utf16 escape
-                //
-                // fast path only when the buffer
-                // is large enough for 2 surrogates
-                if(BOOST_JSON_LIKELY(
-                    cs.remain() >= 11))
-                {
-                    int32_t d;
-                    std::memcpy(
-                        &d, p + 1, 4);
-#ifdef BOOST_JSON_BIG_ENDIAN
-                    int d1 = detail::hex_digit(
-                        static_cast<unsigned char>(d >> 24));
-                    int d2 = detail::hex_digit(
-                        static_cast<unsigned char>(d >> 16));
-                    int d3 = detail::hex_digit(
-                        static_cast<unsigned char>(d >> 8));
-                    int d4 = detail::hex_digit(
-                        static_cast<unsigned char>(d));
-#else
-                    int d4 = detail::hex_digit(
-                        static_cast<unsigned char>(d >> 24));
-                    int d3 = detail::hex_digit(
-                        static_cast<unsigned char>(d >> 16));
-                    int d2 = detail::hex_digit(
-                        static_cast<unsigned char>(d >> 8));
-                    int d1 = detail::hex_digit(
-                        static_cast<unsigned char>(d));
-#endif
-                    if(BOOST_JSON_UNLIKELY(
-                        (d1 | d2 | d3 | d4) == -1))
-                    {
-                        if(d1 != -1)
-                            ++cs;
-                        if(d2 != -1)
-                            ++cs;
-                        if(d3 != -1)
-                            ++cs;
-                        return fail(
-                            +cs, error::expected_hex_digit);
-                    }
-                    // 32 bit unicode scalar value
-                    unsigned const u1 =
-                        (d1 << 12) + (d2 << 8) +
-                        (d3 << 4) + d4;
-                    // valid unicode scalar values are
-                    // [0, D7FF] and [E000, 10FFFF]
-                    // values within this range are valid utf-8
-                    // code points and invalid leading surrogates.
-                    if(BOOST_JSON_LIKELY(
-                        u1 < 0xd800 || u1 > 0xdfff))
-                    {
-                        cs += 5;
-                        temp.append_utf8(u1);
-                        continue;
-                    }
-                    if(u1 > 0xdbff)
-                        return fail(
-                            +cs, error::illegal_leading_surrogate);
-                    cs += 5;
-                    if(BOOST_JSON_UNLIKELY(*cs != '\\'))
-                        return fail(+cs, error::syntax);
-                    ++cs;
-                    if(BOOST_JSON_UNLIKELY(*cs != 'u'))
-                        return fail(+cs, error::syntax);
-                    ++cs;
-                    std::memcpy(&d, +cs, 4);
-#ifdef BOOST_JSON_BIG_ENDIAN
-                    d1 = detail::hex_digit(
-                        static_cast<unsigned char>(d >> 24));
-                    d2 = detail::hex_digit(
-                        static_cast<unsigned char>(d >> 16));
-                    d3 = detail::hex_digit(
-                        static_cast<unsigned char>(d >> 8));
-                    d4 = detail::hex_digit(
-                        static_cast<unsigned char>(d));
-#else
-                    d4 = detail::hex_digit(
-                        static_cast<unsigned char>(d >> 24));
-                    d3 = detail::hex_digit(
-                        static_cast<unsigned char>(d >> 16));
-                    d2 = detail::hex_digit(
-                        static_cast<unsigned char>(d >> 8));
-                    d1 = detail::hex_digit(
-                        static_cast<unsigned char>(d));
-#endif
-                    if(BOOST_JSON_UNLIKELY(
-                        (d1 | d2 | d3 | d4) == -1))
-                    {
-                        if(d1 != -1)
-                            ++cs;
-                        if(d2 != -1)
-                            ++cs;
-                        if(d3 != -1)
-                            ++cs;
-                        return fail(
-                            +cs, error::expected_hex_digit);
-                    }
-                    unsigned const u2 =
-                        (d1 << 12) + (d2 << 8) +
-                        (d3 << 4) + d4;
-                    // valid trailing surrogates are [DC00, DFFF]
-                    if(BOOST_JSON_UNLIKELY(
-                        u2 < 0xdc00 || u2 > 0xdfff))
-                        return fail(
-                            +cs, error::illegal_leading_surrogate);
-                    cs += 4;
-                    unsigned cp =
-                        ((u1 - 0xd800) << 10) +
-                         (u2  - 0xdc00) +
-                         0x10000;
-                    // utf-16 surrogate pair
-                    temp.append_utf8(cp);
-                    continue;
-                }
-                // flush
-                if(BOOST_JSON_LIKELY(
-                    ! temp.empty()))
-                {
-                    if(BOOST_JSON_UNLIKELY(
-                        ! (handler().*on_part)(temp, ec_)))
-                        return fail(+cs);
-                    temp.clear();
-                    cs.clip(temp.max_size());
-                }
-                ++cs;
-                goto do_str4;
-
-            default:
-                return fail(+cs, error::syntax);
-            }
-            ++cs;
-            continue;
-        }
-
-        if(BOOST_JSON_LIKELY(
-            ! temp.empty()))
-        {
-            if(BOOST_JSON_UNLIKELY(
-                ! (handler().*on_part)(temp, ec_)))
-                return fail(+cs);
-            temp.clear();
-        }
-        cs.clip(temp.max_size());
-        if(BOOST_JSON_UNLIKELY(! cs))
-            return partial_if_more(+cs, state::str3);
-        goto do_str3;
         // utf-16 escape
 do_str4:
         {
