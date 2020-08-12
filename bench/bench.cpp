@@ -112,6 +112,18 @@ struct sample
     std::size_t mbs;
 };
 
+void
+cache_flush(string_view file)
+{
+#ifdef BOOST_JSON_USE_SSE2
+    // cache line size is typically 64 bytes, 
+    // but we will flush every 32 just in case
+    for(auto ptr = file.begin();
+        ptr < file.end(); ptr += 32)
+    _mm_clflush(ptr);
+#endif
+}
+
 // Returns the number of invocations per second
 template<
     class Rep,
@@ -156,6 +168,7 @@ bench(
             std::size_t repeat = 1000;
             for(unsigned k = 0; k < Trials; ++k)
             {
+                cache_flush(vf[i].text);
                 auto result = run_for(
                     std::chrono::seconds(5),
                     [&]
