@@ -157,7 +157,10 @@ class basic_parser
     result parse_false(Handler& h, const_stream& cs);
     
     template<bool StackEmpty, bool AllowBadUTF8, class Handler>
-    result parse_string(Handler& h, const_stream& cs);
+    result parse_unescaped(Handler& h, const_stream& cs);
+
+    template<bool StackEmpty, bool AllowBadUTF8, class Handler>
+    result parse_escaped(Handler& h, const_stream& cs);
     
     template<bool StackEmpty, char First, class Handler>
     result parse_number(Handler& h, const_stream& cs);
