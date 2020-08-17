@@ -1221,6 +1221,82 @@ public:
         bad("\"\\t\\t\xf4\x70\x80\x80----------\"");
         bad("\"\\n\xf4\x80\x70\x80----------\"");
         bad("\"\\n\xf4\x80\xbf\x70-\\n\xf4\x80\xbf\x70\"");
+
+        // parser and subsequent test were
+        // written by https://github.com/rtobar
+        class utf8_parser : public basic_parser
+        {
+            friend class basic_parser;
+
+            bool on_document_begin( error_code& ) { return true; }
+            bool on_document_end( error_code& ) { return true; }
+            bool on_object_begin( error_code& ) { return true; }
+            bool on_object_end( error_code& ) { return true; }
+            bool on_array_begin( error_code& ) { return true; }
+            bool on_array_end( error_code& ) { return true; }
+            bool on_key_part( string_view, error_code& ) { return true; }
+            bool on_key( string_view, error_code& ) { return true; }
+            bool on_string_part( string_view sv, error_code& )
+            {
+                captured.append(sv.data(), sv.size());
+                return true;
+            }
+            bool on_string( string_view sv, error_code& )
+            {
+                captured.append(sv.data(), sv.size());
+                return true;
+            }
+            bool on_number_part( string_view, error_code&) { return true; }
+            bool on_int64( std::int64_t, string_view, error_code& ) { return true; }
+            bool on_uint64( std::uint64_t, string_view, error_code& ) { return true; }
+            bool on_double( double, string_view, error_code& ) { return true; }
+            bool on_bool( bool, error_code& ) { return true; }
+            bool on_null( error_code& ) { return true; }
+            bool on_comment_part( string_view, error_code& ) { return true; }
+            bool on_comment( string_view, error_code& ) { return true; }
+
+        public:
+            std::string captured = "";
+
+            utf8_parser()
+                : basic_parser() { }
+
+            ~utf8_parser() {}
+
+            std::size_t
+            write(
+                bool more,
+                char const* data,
+                std::size_t size,
+                error_code& ec)
+            {
+                auto const n =
+                    basic_parser::write_some(
+                    *this, more, data, size, ec);
+                if(! ec && n < size)
+                    ec = error::extra_data;
+                return n;
+            }
+        };
+
+        const auto check =
+            [this](string_view expected)
+        {
+            good(expected);
+            utf8_parser p;
+            for(std::size_t i = 0; i < expected.size(); ++i)
+            {
+                error_code ec;
+                auto more = (i != expected.size() - 1);
+                p.write(more, expected.data() + i, 1, ec);
+                BOOST_TEST(! ec);
+            }
+            BOOST_TEST(p.captured == expected);
+        };
+
+        check("\"\xd1\x82\"");
+        check("\"\xd1\x82\xd0\xb5\xd1\x81\xd1\x82\"");
+        check("\"\xc3\x0b1""and\xc3\xba\"");
     }
 
     void
