@@ -1321,88 +1321,10 @@ parse_unescaped(
     ++cs;
     start = cs.data();
 do_str1:
-    if(AllowBadUTF8)
-        cs.skip(detail::count_unescaped(
-            cs.data(), cs.remain()));
-    else
-        cs.skip(detail::count_valid_unescaped(
-            cs.data(), cs.remain()));
-    for(;;)
+    cs.skip_to(count_valid<AllowBadUTF8>(
+        start, start + cs.remain()));
+    if(BOOST_JSON_UNLIKELY(! cs))
     {
-        if(BOOST_JSON_LIKELY(cs))
-        {
-            c = *cs;
-            if(BOOST_JSON_LIKELY(
-                c == '\x22')) // '"'
-            {
-                if(is_key_)
-                {
-                    if(BOOST_JSON_UNLIKELY(
-                        ! h.on_key({ start,
-                        cs.used(start)}, ec_)))
-                        return result::fail;
-                    is_key_ = false;
-                }
-                else
-                {
-                    if(BOOST_JSON_UNLIKELY(
-                        ! h.on_string({ start,
-                        cs.used(start)}, ec_)))
-                        return result::fail;
-                }
-                ++cs;
-                return result::ok;
-            }
-            else if(! AllowBadUTF8 && 
-                (c & 0x80))
-            {
-do_utf17:
-                const result r = 
-                    validate_utf8<StackEmpty>(cs);
-                if(BOOST_JSON_UNLIKELY(r))
-                {
-                    if(more_ && r == result::partial)
-                        suspend(state::utf17);
-                    return r;
-                }
-                continue;
-            }
-            else if(BOOST_JSON_LIKELY(
-                c == '\\'))
-            {
-                // flush unescaped run from input
-                if(BOOST_JSON_LIKELY(
-                    cs.data() > start))
-                {
-                    if(is_key_)
-                    {
-                        if(BOOST_JSON_UNLIKELY(
-                            ! h.on_key_part({start,
-                                cs.used(start)}, ec_)))
-                            return result::fail;
-                    }
-                    else
-                    {
-                        if(BOOST_JSON_UNLIKELY(
-                            ! h.on_string_part({start,
-                                cs.used(start)}, ec_)))
-                            return result::fail;
-                    }
-                }
-                ++cs;
-                return parse_escaped<StackEmpty, 
-                    AllowBadUTF8, Handler>(h, cs);
-            }
-            else if(BOOST_JSON_UNLIKELY(
-                is_control(c)))
-            {
-                // invalid character
-                ec_ = error::syntax;
-                return result::fail;
-            }
-            ++cs;
-            continue;
-        }
         if(BOOST_JSON_LIKELY(more_))
         {
             if(BOOST_JSON_LIKELY(
@@ -1427,6 +1349,89 @@ do_utf17:
         }
         return result::partial;
     }
+    switch(*cs)
+    {
+    case '"':
+        if(is_key_)
+        {
+            if(BOOST_JSON_UNLIKELY(
+                ! h.on_key({ start,
+                cs.used(start)}, ec_)))
+                return result::fail;
+            is_key_ = false;
+        }
+        else
+        {
+            if(BOOST_JSON_UNLIKELY(
+                ! h.on_string({ start,
+                cs.used(start)}, ec_)))
+                return result::fail;
+        }
+        ++cs;
+        return result::ok;
+    case '\\':
+        if(BOOST_JSON_LIKELY(cs.data() > start))
+        {
+            if(is_key_)
+            {
+                if(BOOST_JSON_UNLIKELY(
+                    ! h.on_key_part({start,
+                        cs.used(start)}, ec_)))
+                    return result::fail;
+            }
+            else
+            {
+                if(BOOST_JSON_UNLIKELY(
+                    ! h.on_string_part({start,
+                        cs.used(start)}, ec_)))
+                    return result::fail;
+            }
+        }
+        ++cs;
+        return parse_escaped<StackEmpty, 
+            AllowBadUTF8, Handler>(h, cs);
+    }
+//    for(;;)
+//    {
+//        if(BOOST_JSON_LIKELY(cs))
+//        {
+//            c = *cs;
+//            if(BOOST_JSON_LIKELY(
+//                c == '\x22')) // '"'
+//            {
+//                
+//            }
+//            else if(! AllowBadUTF8 && 
+//                (c & 0x80))
+//            {
+//do_utf17:
+//                const result r = 
+//                    validate_utf8<StackEmpty>(cs);
+//                if(BOOST_JSON_UNLIKELY(r))
+//                {
+//                    if(more_ && r == result::partial)
+//                        suspend(state::utf17);
+//                    return r;
+//                }
+//                continue;
+//            }
+//            else if(BOOST_JSON_LIKELY(
+//                c == '\\'))
+//            {
+//                // flush unescaped run from input
+//                
+//            }
+//            else if(BOOST_JSON_UNLIKELY(
+//                is_control(c)))
+//            {
+//                // invalid character
+//                ec_ = error::syntax;
+//                return result::fail;
+//            }
+//            ++cs;
+//            continue;
+//        }
+//    }
 }
 
 template<
@@ -1460,11 +1465,10 @@ parse_escaped(
     // the size of the input stream is temporarily "clipped" to the size
     // of the temporary buffer.
     cs.clip(temp.max_size());
-    char const* start;
+    char const* start = cs.data();
     char c;
     if(! StackEmpty && ! st_.empty())
     {
-        start = cs.data();
         state st;
         st_.pop(st);
         switch(st)
