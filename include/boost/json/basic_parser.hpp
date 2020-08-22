@@ -147,19 +147,6 @@ dec_to_float(
         pow10(e);
 }
 
-inline
-uint32_t
-little_endian(uint32_t v)
-{
-#ifdef BOOST_JSON_BIG_ENDIAN
-    v = (((v & 0xFF000000) >> 24) |
-        ((v & 0x00FF0000) >> 8) |
-        ((v & 0x0000FF00) << 8) |
-        ((v & 0x000000FF) << 24))
-#endif
-    return v;
-}
-
 } // detail
 
 //----------------------------------------------------------

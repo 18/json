@@ -19,6 +19,19 @@ namespace json {
 namespace detail {
 
 inline
+uint32_t
+little_endian(uint32_t v)
+{
+#ifdef BOOST_JSON_BIG_ENDIAN
+    v = (((v & 0xFF000000) >> 24) |
+        ((v & 0x00FF0000) >> 8) |
+        ((v & 0x0000FF00) << 8) |
+        ((v & 0x000000FF) << 24))
+#endif
+    return v;
+}
+
+inline
 uint16_t
 classify_utf8(char c)
 {
@@ -68,30 +81,37 @@ is_valid_utf8(const char* p, uint16_t first)
     // 2 bytes, second byte [80, BF]
     case 1:
         std::memcpy(&v, p, 2);
+        v = little_endian(v);
         return (v & 0xC000) == 0x8000;
     // 3 bytes, second byte [A0, BF]
     case 2:
         std::memcpy(&v, p, 3);
+        v = little_endian(v);
         return (v & 0xC0E000) == 0x80A000;
     // 3 bytes, second byte [80, BF]
     case 3:
         std::memcpy(&v, p, 3);
+        v = little_endian(v);
         return (v & 0xC0C000) == 0x808000;
     // 3 bytes, second byte [80, 9F]
     case 4:
         std::memcpy(&v, p, 3);
+        v = little_endian(v);
         return (v & 0xC0E000) == 0x808000;
     // 4 bytes, second byte [90, BF]
     case 5:
         std::memcpy(&v, p, 4);
+        v = little_endian(v);
         return (v & 0xC0C0FF00) + 0x7F7F7000 <= 0x2F00;
     // 4 bytes, second byte [80, BF]
     case 6:
         std::memcpy(&v, p, 4);
+        v = little_endian(v);
         return (v & 0xC0C0C000) == 0x80808000;
     // 4 bytes, second byte [80, 8F]
     case 7:
         std::memcpy(&v, p, 4);
+        v = little_endian(v);
         return (v & 0xC0C0F000) == 0x80808000;
     }
 }
