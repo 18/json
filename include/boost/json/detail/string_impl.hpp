@@ -55,10 +55,25 @@ class string_impl
             ((unsigned char)
             kind::string) | 0x80);
 
+    static
+    constexpr
+    kind
+    key_string_ =
+        static_cast<kind>(
+            ((unsigned char)
+            kind::string) | 0x40);
+
     struct sbo
     {
         kind k; // must come first
         char buf[sbo_chars_ + 1];
+    };
+
+    struct key
+    {
+        kind k; // must come first
+        uint32_t size;
+        char* buf;
     };
 
     struct pointer
@@ -73,6 +88,7 @@ class string_impl
     union
     {
         sbo s_;
+        key k_;
         pointer p_;
     };
 
@@ -87,6 +103,12 @@ public:
 
     BOOST_JSON_DECL
     string_impl() noexcept;
+
+    BOOST_JSON_DECL
+    string_impl(
+        const char* key, 
+        uint32_t len,
+        storage_ptr const& sp) noexcept;
 
     BOOST_JSON_DECL
     string_impl(
@@ -237,6 +259,7 @@ public:
     void
     term(std::size_t n) noexcept
     {
+        BOOST_ASSERT(s_.k != key_string_);
         if(s_.k == short_string_)
         {
             s_.buf[sbo_chars_] =
@@ -255,6 +278,7 @@ public:
     char*
     data() noexcept
     {
+        BOOST_ASSERT(s_.k != key_string_);
         if(s_.k == short_string_)
             return s_.buf;
         return reinterpret_cast<
@@ -264,6 +288,7 @@ public:
     char const*
     data() const noexcept
     {
+        BOOST_ASSERT(s_.k != key_string_);
         if(s_.k == short_string_)
             return s_.buf;
         return reinterpret_cast<

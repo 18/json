@@ -43,6 +43,18 @@ string_impl() noexcept
 
 string_impl::
 string_impl(
+    const char* key,
+    uint32_t len,
+    storage_ptr const& sp) noexcept
+{
+    k_.k = key_string_;
+    k_.buf = static_cast<char*>(
+        sp->allocate(len + 1));
+    k_.size = len;
+}
+
+string_impl::
+string_impl(
     std::size_t size,
     storage_ptr const& sp)
 {
