@@ -508,6 +508,28 @@ rehash(std::size_t new_capacity)
 
 auto
 object::
+prepare(std::size_t new_capacity) ->
+    pointer
+{
+    BOOST_ASSERT(new_capacity > capacity());
+    const unsigned long long* prime = 
+        object_impl::bucket_sizes();
+    while(new_capacity > *prime)
+        ++prime;
+    new_capacity = *prime;
+    if(new_capacity > max_size())
+        object_too_large::raise();
+    object_impl impl(
+        new_capacity,
+        prime - object_impl::bucket_sizes(),
+        impl_.salt(),
+        sp_);
+    impl_.swap(impl);
+    return impl_.begin();
+}
+
+auto
+object::
 emplace_impl(
     key_type key,
     place_one& f) ->

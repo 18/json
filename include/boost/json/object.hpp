@@ -107,6 +107,13 @@ class object
     object(object_test const*);
 
 public:
+    struct unchecked_tag { };
+
+    object(unchecked_tag, const storage_ptr& sp)
+        : sp_(sp)
+    {
+    }
+
     /** The type of keys.
 
         The function @ref string::max_size returns the
@@ -1300,6 +1307,22 @@ public:
     BOOST_JSON_DECL
     bool
     contains(key_type key) const noexcept;
+
+    BOOST_JSON_DECL
+    pointer
+    prepare(std::size_t new_capacity);
+
+    void
+    build()
+    {
+        return impl_.build();
+    }
+
+    void
+    grow()
+    {
+        impl_.tab_->size++;
+    }
 
 private:
     struct place_one;

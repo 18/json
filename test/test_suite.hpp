@@ -671,8 +671,9 @@ using log_type = detail::log_ostream<char>;
 #else
    #define BOOST_TEST_THROWS( expr, except )
 #endif
-
 #define TEST_SUITE(type, name) \
+
+#define TEST_SUITEX(type, name) \
     static ::test_suite::detail::instance<type> type##_(name)
 
 inline

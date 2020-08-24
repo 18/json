@@ -1010,7 +1010,7 @@ parse_unescaped(const char* p)
         return fail(cs.begin(), error::syntax);
     }
     if(BOOST_JSON_UNLIKELY(! (h_.*on_full)(
-        {start, size}, ec_)))
+        {start, size}, total, ec_)))
         return fail(cs.begin());
     ++cs;
     return cs.begin();
@@ -1385,7 +1385,7 @@ do_str2:
                 return fail(cs.begin(), ev_too_large);
             total += temp.size();
             if(BOOST_JSON_UNLIKELY(
-                ! (h_.*on_full)(temp, ec_)))
+                ! (h_.*on_full)(temp, total, ec_)))
                 return fail(cs.begin());
             ++cs;
             return cs.begin();
@@ -1571,7 +1571,8 @@ do_obj11:
         // got closing brace, fall through
     }
     if(BOOST_JSON_UNLIKELY(
-        ! h_.on_object_end(ec_)))
+        ! h_.on_object_end(
+            BOOST_JSON_MAX_STRUCTURED_SIZE - size, ec_)))
         return fail(cs.begin());
     ++depth_;
     ++cs;
@@ -1677,7 +1678,8 @@ do_arr6:
         // got closing bracket; fall through
     }
     if(BOOST_JSON_UNLIKELY(
-        ! h_.on_array_end(ec_)))
+        ! h_.on_array_end(
+            BOOST_JSON_MAX_STRUCTURED_SIZE - size, ec_)))
         return fail(cs.begin());
     ++depth_;
     ++cs;

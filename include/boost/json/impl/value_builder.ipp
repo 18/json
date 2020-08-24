@@ -480,12 +480,9 @@ emplace(
     Args&&... args)
 {
     if(lev_.st == state::key)
-    {
-        emplace_object(
+        return emplace_object(
             std::forward<Args>(args)...);
-        return;
-    }
-    emplace_array(
+    return emplace_array(
         std::forward<Args>(args)...);
 }
 

@@ -172,6 +172,15 @@ public:
     std::size_t
     digest(string_view key) const noexcept;
 
+    struct table
+    {
+        std::size_t size;
+        std::size_t const capacity;
+        std::size_t const prime_index;
+        std::uintptr_t const salt;
+    };
+    
+    table* tab_ = nullptr;
 private:
     std::size_t
     buckets() const noexcept
@@ -183,15 +192,6 @@ private:
     index_t*
     bucket_begin() const noexcept;
 
-    struct table
-    {
-        std::size_t size;
-        std::size_t const capacity;
-        std::size_t const prime_index;
-        std::uintptr_t const salt;
-    };
-
-    table* tab_ = nullptr;
 };
 
 //----------------------------------------------------------

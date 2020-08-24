@@ -52,9 +52,10 @@ bool
 parser::
 handler::
 on_object_end(
+    std::size_t n,
     error_code&)
 {
-    vb.end_object();
+    vb.end_object(n);
     return true;
 }
 
@@ -72,9 +73,10 @@ bool
 parser::
 handler::
 on_array_end(
+    std::size_t n,
     error_code&)
 {
-    vb.end_array();
+    vb.end_array(n);
     return true;
 }
 
@@ -94,9 +96,10 @@ parser::
 handler::
 on_key(
     string_view s,
+    std::size_t n,
     error_code&)
 {
-    vb.insert_key(s);
+    vb.insert_key(s, n);
     return true;
 }
         
@@ -116,9 +119,10 @@ parser::
 handler::
 on_string(
     string_view s,
+    std::size_t n,
     error_code&)
 {
-    vb.insert_string(s);
+    vb.insert_string(s, n);
     return true;
 }
 

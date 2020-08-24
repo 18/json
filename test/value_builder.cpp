@@ -12,6 +12,10 @@
 
 #include <boost/json/serializer.hpp>
 
+#include <boost/json/detail/unchecked_builder.hpp>
+
+#include <iostream>
+
 #include "test_suite.hpp"
 
 namespace boost {
@@ -37,6 +41,22 @@ public:
     vb.end_object();
     assert( to_string(vb.release()) == "{\"a\":1,\"b\":null,\"c\":\"hello\"}" );
 
+
+    detail::unchecked_builder ub;
+    ub.begin_object();
+    ub.insert_key("1", 1);
+    ub.insert_int64(1);
+    ub.end_object(1);
+    //std::cout << to_string(ub.release()) << '\n';
+    //auto v = ub.release();
+
+    //auto a = v.at("a");
+    //auto b = v.at("b");
+    //auto c = v.at("c");
+
+    //for(auto i : a.as_object())
+        //std::cout << to_string(i.value());
+    //assert( to_string(ub.release()) == "{\"a\":1,\"b\":null,\"c\":\"hello\"}" );
     }
 
     void
@@ -46,7 +66,7 @@ public:
     }
 };
 
-TEST_SUITE(value_builder_test, "boost.json.value_builder");
+TEST_SUITEX(value_builder_test, "boost.json.value_builder");
 
 } // json
 } // boost

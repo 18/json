@@ -43,6 +43,7 @@ namespace json {
 */
 class value
 {
+public:
 #ifndef BOOST_JSON_DOCS
     // XSL scripts have trouble with private anon unions
     using int64_k = detail::int64_k;
@@ -77,11 +78,11 @@ class value
     struct init_iter;
 
     friend class value_builder;
+    friend class unchecked_builder;
     friend class key_value_pair;
     inline value(detail::unchecked_object&& uo);
     inline value(detail::unchecked_array&& ua);
 
-public:
     /** Destructor.
 
         The value and all of its contents are destroyed.
