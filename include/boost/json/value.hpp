@@ -2862,7 +2862,7 @@ private:
 #endif
 
     json::value value_;
-    char* key_;
+    char const* key_;
     std::uint32_t len_;
     std::uint32_t next_;
 };
