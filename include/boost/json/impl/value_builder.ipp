@@ -20,6 +20,83 @@ namespace json {
 
 //----------------------------------------------------------
 
+value_builder::
+stack::
+~stack()
+{
+    clear();
+    if(data_)
+        sp_->deallocate(data_,
+            sizeof(value) * capacity_);
+}
+
+value_builder::
+stack::
+stack(storage_ptr sp) noexcept
+    : sp_(std::move(sp))
+{
+}
+
+// destroy the values but
+// not the stack allocation.
+void
+value_builder::
+stack::
+clear() noexcept
+{
+    if(size_ == 0)
+        return;
+    // the storage used by the
+    // values is different from sp_
+    auto const sp = data_->storage();
+    if(sp.is_not_counted_and_deallocate_is_null())
+        return;
+    for(auto it = data_,
+        end = data_ + size_;
+        it != end; ++it)
+        it->~value();
+}
+void
+value_builder::
+stack::
+prepare(std::size_t n)
+{
+    if(size_ + n <= capacity_)
+        return;
+    // grow
+    std::size_t new_cap;
+    if(capacity_ < 32)
+        new_cap = 32;
+    else
+        new_cap = capacity_ * 2;
+    while(new_cap < size_ + n)
+        new_cap = new_cap * 2;
+    auto p = sp_->allocate(
+        sizeof(value) * new_cap);
+    std::memcpy(p, data_,
+        sizeof(value) * size_);
+    sp_->deallocate(data_,
+        sizeof(value) * capacity_);
+    capacity_ = new_cap;
+    data_ = reinterpret_cast<
+        value*>(p);
+}
+
+template<class... Args>
+void
+value_builder::
+stack::
+emplace(Args&&... args)
+{
+    // must call prepare first
+    BOOST_ASSERT(size_ < capacity_);
+    ::new(data_) value(
+        std::forward<Args>(args)...);
+    ++size_;
+}
+
+//----------------------------------------------------------
+
 /*
 
 Stack Layout:
@@ -68,7 +145,8 @@ value_builder::
 value_builder::
 value_builder(
     storage_ptr sp) noexcept
-    : rs_(std::move(sp))
+    : st_(sp)
+    , rs_(std::move(sp))
 {
     lev_.st = state::need_reset;
 }

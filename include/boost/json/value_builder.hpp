@@ -17,6 +17,8 @@
 #include <boost/json/detail/raw_stack.hpp>
 #include <stddef.h>
 
+#include <string> // VFALCO REMOVE
+
 namespace boost {
 namespace json {
 
@@ -76,11 +78,30 @@ class value_builder
         state st;
     };
 
+    class stack
+    {
+        storage_ptr sp_;
+        value* data_ = nullptr;
+        std::size_t size_ = 0;
+        std::size_t capacity_ = 0;
+
+    public:
+        inline ~stack();
+        inline stack(storage_ptr sp) noexcept;
+        inline void clear() noexcept;
+        inline void prepare(std::size_t n);
+        template<class... Args>
+        void emplace(Args&&... args);
+    };
+
+    stack st_;
     storage_ptr sp_;
     detail::raw_stack rs_;
     std::uint32_t key_size_ = 0;
     std::uint32_t str_size_ = 0;
     level lev_;
+
+    std::string temp_;
 
 public:
     /** Destructor.
