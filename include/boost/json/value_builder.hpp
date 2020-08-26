@@ -86,9 +86,9 @@ class value_builder
         inline void grow_one();
         inline void save(std::size_t);
         inline void restore(std::size_t*) noexcept;
+        inline value* release(std::size_t n);
         template<class... Args>
         value& push(Args&&... args);
-        inline value* release(std::size_t n);
     };
 
     stack st_;

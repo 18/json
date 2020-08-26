@@ -123,7 +123,7 @@ public:
         tab_->size -= n;
     }
 
-    inline
+    template<bool NeedDestroy>
     void
     build(unchecked_object&& uo) noexcept;
 
@@ -198,8 +198,6 @@ private:
 };
 
 //----------------------------------------------------------
-
-struct next_access;
 
 class unchecked_object
 {

@@ -68,12 +68,11 @@ clear() noexcept
 }
 
 // checks for dupes
+template<bool NeedDestroy>
 void
 object_impl::
 build(unchecked_object&& uo) noexcept
 {
-    auto const run_dtor = uo.storage(
-        ).is_not_counted_and_deallocate_is_null();
     // insert all elements, keeping
     // the last of any duplicate keys.
     auto src = uo.release();
@@ -85,7 +84,7 @@ build(unchecked_object&& uo) noexcept
     {
         value_access::construct_key_value_pair(
             dest, pilfer(src[0]), pilfer(src[1]));
-        if(run_dtor)
+        if(NeedDestroy)
         {
             src[0].~value();
             src[1].~value();
@@ -106,7 +105,8 @@ build(unchecked_object&& uo) noexcept
             dup.~key_value_pair();
             // trivial relocate
             std::memcpy(
-                &dup, dest, sizeof(dup));
+                reinterpret_cast<void*>(&dup),
+                    dest, sizeof(dup));
         }
         else
         {

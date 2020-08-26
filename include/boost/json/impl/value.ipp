@@ -367,20 +367,6 @@ destroy() noexcept
 
 //----------------------------------------------------------
 
-namespace detail {
-
-char const*
-value_access::
-release_key(
-    value& jv,
-    std::size_t& len) noexcept
-{
-    BOOST_ASSERT(jv.is_string());
-    return jv.str_.impl_.release_key(len);
-}
-
-} // detail
-
 key_value_pair::
 key_value_pair(
     pilfered<json::value> key,

@@ -17,27 +17,6 @@ namespace boost {
 namespace json {
 namespace detail {
 
-struct next_access
-{
-    using index_t = std::uint32_t;
-
-    static
-    inline
-    index_t&
-    get(key_value_pair& e) noexcept
-    {
-        return e.next_;
-    }
-
-    static
-    inline
-    index_t
-    get(key_value_pair const& e) noexcept
-    {
-        return e.next_;
-    }
-};
-
 void
 object_impl::
 remove(
@@ -269,7 +248,7 @@ object_impl::
 next(value_type& e) noexcept ->
     index_t&
 {
-    return next_access::get(e);
+    return value_access::next(e);
 }
 
 auto
@@ -277,7 +256,7 @@ object_impl::
 next(value_type const& e) noexcept ->
     index_t
 {
-    return next_access::get(e);
+    return value_access::next(e);
 }
 
 //----------------------------------------------------------

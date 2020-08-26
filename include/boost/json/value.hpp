@@ -70,8 +70,6 @@ class value
 
     friend struct detail::value_access;
 
-    // VFALCO Replace friendship with value_access
-    //friend class key_value_pair;
     // VFALCO Why are these in
     // detail/value.hpp instead of detail/value.ipp?
     inline value(detail::unchecked_object&& uo);
@@ -2860,11 +2858,6 @@ private:
     inline
     std::uint32_t
     key_size(std::size_t n);
-
-#ifndef BOOST_JSON_DOCS
-    // docca emits this when it shouldn't
-    friend struct detail::next_access;
-#endif
 
     json::value value_;
     char const* key_;

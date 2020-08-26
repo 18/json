@@ -17,10 +17,6 @@
 
 namespace boost {
 namespace json {
-
-class value;
-class key_value_pair;
-
 namespace detail {
 
 struct int64_k
@@ -168,34 +164,56 @@ struct null_k
 
 struct value_access
 {
-    template<class... Args>
+    template<class Value, class... Args>
     static
-    value&
-    construct_value(void* p, Args&&... args)
+    Value&
+    construct_value(Value* p, Args&&... args)
     {
         return *reinterpret_cast<
-            value*>(::new(p) value(
+            Value*>(::new(p) Value(
             std::forward<Args>(args)...));
     }
 
-    template<class... Args>
+    template<class KeyValuePair, class... Args>
     static
-    key_value_pair&
+    KeyValuePair&
     construct_key_value_pair(
-        void* p, Args&&... args)
+        KeyValuePair* p, Args&&... args)
     {
         return *reinterpret_cast<
-            key_value_pair*>(::new(p)
-                key_value_pair(
+            KeyValuePair*>(::new(p)
+                KeyValuePair(
                     std::forward<Args>(args)...));
     }
 
+    template<class Value>
     static
-    inline
     char const*
     release_key(
-        value& jv,
-        std::size_t& len) noexcept;
+        Value& jv,
+        std::size_t& len) noexcept
+    {
+        BOOST_ASSERT(jv.is_string());
+        return jv.str_.impl_.release_key(len);
+    }
+
+    using index_t = std::uint32_t;
+
+    template<class KeyValuePair>
+    static
+    index_t&
+    next(KeyValuePair& e) noexcept
+    {
+        return e.next_;
+    }
+
+    template<class KeyValuePair>
+    static
+    index_t const&
+    next(KeyValuePair const& e) noexcept
+    {
+        return e.next_;
+    }
 };
 
 } // detail

@@ -52,18 +52,20 @@ value_builder::
 stack::
 clear() noexcept
 {
-    if(size_ == 0)
-        return;
-    // the storage used by the
-    // values is different from sp_
-    auto const sp = begin_->storage();
-    if(sp.is_not_counted_and_deallocate_is_null())
-        return;
-    for(auto it = begin_,
-        end = begin_ + size_;
-        it != end; ++it)
-        it->~value();
-    size_ = 0;
+    if(size_ != 0)
+    {
+        // the storage used by the
+        // values is different from sp_
+        auto const sp = begin_->storage();
+        if(! sp.is_not_counted_and_deallocate_is_null())
+        {
+            for(auto it = begin_,
+                end = begin_ + size_;
+                it != end; ++it)
+                it->~value();
+        }
+        size_ = 0;
+    }
 }
 void
 value_builder::
@@ -113,6 +115,18 @@ restore(std::size_t* n) noexcept
     //p->~value(); // not needed
 }
 
+// transfer ownership of the top n
+// elements of the stack to the caller
+value*
+value_builder::
+stack::
+release(std::size_t n)
+{
+    BOOST_ASSERT(n <= size_);
+    size_ -= n;
+    return begin_ + size_;
+}
+
 template<class... Args>
 value&
 value_builder::
@@ -127,18 +141,6 @@ push(Args&&... args)
             std::forward<Args>(args)...);
     ++size_;
     return jv;
-}
-
-// transfer ownership of the top n
-// elements of the stack to the caller
-value*
-value_builder::
-stack::
-release(std::size_t n)
-{
-    BOOST_ASSERT(n <= size_);
-    size_ -= n;
-    return begin_ + size_;
 }
 
 //----------------------------------------------------------
