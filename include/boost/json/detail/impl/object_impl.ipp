@@ -72,42 +72,50 @@ void
 object_impl::
 build(unchecked_object&& uo) noexcept
 {
+    auto const run_dtor = uo.storage(
+        ).is_not_counted_and_deallocate_is_null();
     // insert all elements, keeping
     // the last of any duplicate keys.
-    auto it = uo.release();
-    auto const end = it + 2 * uo.size();
-    while(it != end)
+    auto src = uo.release();
+    auto const end = src + 2 * uo.size();
+    auto dest = begin();
+    if(src == end)
+        return;
+    while(src != end)
     {
-        ++it;
-    }
-
-#if 0
-    // must work when table pointer is null
-    auto const first = begin();
-    for(auto last = end(); last > first;)
-    {
-        --last;
-        auto head = &bucket(last->key());
+        value_access::construct_key_value_pair(
+            dest, pilfer(src[0]), pilfer(src[1]));
+        if(run_dtor)
+        {
+            src[0].~value();
+            src[1].~value();
+        }
+        src += 2;
+        auto head = &bucket(dest->key());
         auto i = *head;
         while(i != null_index &&
-            get(i).key() != last->key())
+            get(i).key() != dest->key())
             i = next(get(i));
         if(i != null_index)
         {
             // handle duplicate
-            last->~value_type();
+            auto& dup = get(i);
+            next(*dest) = next(dup);
+            // don't bother checking if
+            // storage deallocate is null
+            dup.~key_value_pair();
+            // trivial relocate
             std::memcpy(
-                static_cast<void*>(last),
-                static_cast<void const*>(
-                    first + tab_->size - 1),
-                sizeof(*last));
-            --tab_->size;
-            head = &bucket(last->key());
+                &dup, dest, sizeof(dup));
         }
-        next(*last) = *head;
-        *head = index_of(*last);
+        else
+        {
+            next(*dest) = *head;
+            *head = index_of(*dest);
+            ++dest;
+        }
     }
-#endif
+    tab_->size = dest - begin();
 }
 
 // does not check for dupes

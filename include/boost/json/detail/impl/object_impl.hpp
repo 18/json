@@ -291,7 +291,7 @@ unchecked_object::
         value* p = data_;
         while(size_--)
         {
-            //p[0].~value(); // not needed
+            p[0].~value();
             p[1].~value();
             p += 2;
         }

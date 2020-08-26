@@ -2705,6 +2705,8 @@ swap(value& lhs, value& rhs)
 */
 class key_value_pair
 {
+    friend struct detail::value_access;
+
     inline
     key_value_pair(
         pilfered<json::value> k,

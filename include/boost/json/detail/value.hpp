@@ -19,6 +19,7 @@ namespace boost {
 namespace json {
 
 class value;
+class key_value_pair;
 
 namespace detail {
 
@@ -170,11 +171,23 @@ struct value_access
     template<class... Args>
     static
     value&
-    construct(void* p, Args&&... args)
+    construct_value(void* p, Args&&... args)
     {
         return *reinterpret_cast<
             value*>(::new(p) value(
             std::forward<Args>(args)...));
+    }
+
+    template<class... Args>
+    static
+    key_value_pair&
+    construct_key_value_pair(
+        void* p, Args&&... args)
+    {
+        return *reinterpret_cast<
+            key_value_pair*>(::new(p)
+                key_value_pair(
+                    std::forward<Args>(args)...));
     }
 
     static

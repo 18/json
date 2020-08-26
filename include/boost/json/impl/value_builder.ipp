@@ -121,8 +121,8 @@ push(Args&&... args)
 {
     if(size_ >= capacity_)
         grow_one();
-    value& jv =
-        detail::value_access::construct(
+    value& jv = detail::value_access::
+        construct_value(
             begin_ + size_,
             std::forward<Args>(args)...);
     ++size_;
