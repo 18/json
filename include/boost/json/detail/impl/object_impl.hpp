@@ -285,19 +285,16 @@ next(value_type const& e) noexcept ->
 unchecked_object::
 ~unchecked_object()
 {
-    if(data_)
-        destroy(data_, size_);
-}
-
-void
-unchecked_object::
-relocate(object::value_type* dest) noexcept
-{
-    if(size_ > 0)
-        std::memcpy(
-            static_cast<void*>(dest), data_,
-            size_ * sizeof(object::value_type));
-    data_ = nullptr;
+    if( data_ &&
+        ! sp_.is_not_counted_and_deallocate_is_null())
+    {
+        value* p = data_;
+        while(size_--)
+        {
+            //p[0].~value(); // not needed
+            p[1].~value();
+        }
+    }
 }
 
 } // detail

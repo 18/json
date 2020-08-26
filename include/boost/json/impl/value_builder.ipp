@@ -110,8 +110,7 @@ restore(std::size_t* n) noexcept
     auto p = begin_ + (--size_);
     BOOST_ASSERT(p->is_uint64());
     *n = p->get_uint64();
-    // VFALCO in theory we could skip this
-    p->~value();
+    //p->~value(); // not needed
 }
 
 template<class... Args>
@@ -202,31 +201,30 @@ value
 value_builder::
 release()
 {
-    // at this point we should have
-    // a size followed by a value
-    // VFALCO Throw here on precondition violation
-    BOOST_ASSERT(st_.size() == 2);
-
-    auto p = st_.release(2);
-
-    // VFALCO in theory we could skip this
-    p[0].~value();
-
     // give up shared ownership
     sp_ = {};
 
-    return pilfer(p[1]);
+    if(st_.size() == 1)
+    {
+        auto p = st_.release(1);
+        return pilfer(*p);
+    }
+
+    // This means the caller did not
+    // cause a single top level element
+    // to be produced.
+    throw std::logic_error("no value");
 }
 
 void
 value_builder::
 clear() noexcept
 {
-    st_.clear();
-    temp_.clear();
-
     // give up shared ownership
     sp_ = {};
+
+    st_.clear();
+    temp_.clear();
 }
 
 //----------------------------------------------------------
@@ -263,17 +261,16 @@ void
 value_builder::
 end_object()
 {
-    // must have an even number
+    // must be even
     BOOST_ASSERT(
         ((st_.size() - top_) & 1) == 0);
+
     auto const n =
         st_.size() - top_;
-#if 0
     detail::unchecked_object uo(
         st_.release(n), n/2, sp_);
-#endif
     st_.restore(&top_);
-    //st_.push(std::move(uo));
+    st_.push(std::move(uo));
 }
 
 void
@@ -289,16 +286,17 @@ value_builder::
 insert_key(
     string_view s)
 {
-    char* dest;
     if(temp_.empty())
     {
         // fast path
+        char* dest;
         st_.push(&dest, s.size(), sp_);
         std::memcpy(
             dest, s.data(), s.size());
         return;
     }
 
+    char* dest;
     st_.push(&dest,
         temp_.size() + s.size(), sp_);
     std::memcpy(dest,

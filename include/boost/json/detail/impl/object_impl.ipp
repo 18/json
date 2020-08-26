@@ -70,8 +70,9 @@ clear() noexcept
 // checks for dupes
 void
 object_impl::
-build() noexcept
+build(unchecked_object&& uo) noexcept
 {
+#if 0
     // must work when table pointer is null
     auto const first = begin();
     for(auto last = end(); last > first;)
@@ -97,6 +98,7 @@ build() noexcept
         next(*last) = *head;
         *head = index_of(*last);
     }
+#endif
 }
 
 // does not check for dupes

@@ -78,9 +78,7 @@ object(detail::unchecked_object&& uo)
     : sp_(uo.storage())
 {
     reserve(uo.size());
-    uo.relocate(impl_.begin());
-    impl_.grow(uo.size());
-    impl_.build();
+    impl_.build(std::move(uo));
 }
 
 object::

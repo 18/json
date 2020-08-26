@@ -20,9 +20,12 @@
 namespace boost {
 namespace json {
 
+class value;
 class key_value_pair;
 
 namespace detail {
+
+class unchecked_object;
 
 class object_impl
 {
@@ -122,7 +125,7 @@ public:
 
     inline
     void
-    build() noexcept;
+    build(unchecked_object&& uo) noexcept;
 
     inline
     void
@@ -200,7 +203,10 @@ struct next_access;
 
 class unchecked_object
 {
-    key_value_pair* data_;
+    // each element is two values,
+    // first one is a string key,
+    // second one is the value.
+    value* data_;
     std::size_t size_;
     storage_ptr const& sp_;
 
@@ -209,8 +215,8 @@ public:
     ~unchecked_object();
 
     unchecked_object(
-        key_value_pair* data,
-        std::size_t size,
+        value* data,
+        std::size_t size, // # of kv-pairs
         storage_ptr const& sp) noexcept
         : data_(data)
         , size_(size)
@@ -239,9 +245,13 @@ public:
         return size_;
     }
 
-    inline
-    void
-    relocate(key_value_pair* dest) noexcept;
+    value*
+    release() noexcept
+    {
+        auto const data = data_;
+        data_ = nullptr;
+        return data;
+    }
 };
 
 //----------------------------------------------------------
