@@ -59,6 +59,12 @@ class string
 {
     friend class value;
 
+    inline
+    string(
+        char** key,
+        std::size_t len,
+        storage_ptr sp);
+
 public:
     /// The traits used to perform character operations
     using traits_type       = std::char_traits<char>;

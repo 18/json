@@ -7,14 +7,19 @@
 // Official repository: https://github.com/cppalliance/json
 //
 
-#ifndef BOOST_JSON_DETAIL_SCALAR_IMPL_HPP
-#define BOOST_JSON_DETAIL_SCALAR_IMPL_HPP
+#ifndef BOOST_JSON_DETAIL_VALUE_HPP
+#define BOOST_JSON_DETAIL_VALUE_HPP
 
 #include <boost/json/kind.hpp>
 #include <boost/json/storage_ptr.hpp>
+#include <new>
+#include <utility>
 
 namespace boost {
 namespace json {
+
+class value;
+
 namespace detail {
 
 struct int64_k
@@ -157,6 +162,19 @@ struct null_k
         : sp(move(sp_))
         , k(kind::null)
     {
+    }
+};
+
+struct value_access
+{
+    template<class... Args>
+    static
+    value&
+    construct(void* p, Args&&... args)
+    {
+        return *reinterpret_cast<
+            value*>(::new(p) value(
+            std::forward<Args>(args)...));
     }
 };
 

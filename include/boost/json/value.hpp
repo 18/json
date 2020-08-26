@@ -20,7 +20,7 @@
 #include <boost/json/string.hpp>
 #include <boost/json/string_view.hpp>
 #include <boost/json/value_ref.hpp>
-#include <boost/json/detail/scalar_impl.hpp>
+#include <boost/json/detail/value.hpp>
 #include <boost/pilfer.hpp>
 #include <cstdlib>
 #include <initializer_list>
@@ -65,21 +65,18 @@ class value
     };
 #endif
 
-    static
-    constexpr
-    json::kind
-    short_string_ =
-        static_cast<json::kind>(
-            ((unsigned char)
-            json::kind::string) | 0x80);
-
     struct undo;
     struct init_iter;
 
-    friend class value_builder;
+    friend struct detail::value_access;
+
+    // VFALCO Replace friendship with value_access
     friend class key_value_pair;
+    // VFALCO Why are these in
+    // detail/value.hpp instead of detail/value.ipp?
     inline value(detail::unchecked_object&& uo);
     inline value(detail::unchecked_array&& ua);
+    inline value(char** key, std::size_t len, storage_ptr sp);
 
 public:
     /** Destructor.
