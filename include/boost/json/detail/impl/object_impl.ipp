@@ -72,6 +72,15 @@ void
 object_impl::
 build(unchecked_object&& uo) noexcept
 {
+    // insert all elements, keeping
+    // the last of any duplicate keys.
+    auto it = uo.release();
+    auto const end = it + 2 * uo.size();
+    while(it != end)
+    {
+        ++it;
+    }
+
 #if 0
     // must work when table pointer is null
     auto const first = begin();

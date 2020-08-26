@@ -26,7 +26,7 @@ string(
     std::size_t len,
     storage_ptr sp)
     : sp_(std::move(sp))
-    , impl_(key, len, sp)
+    , impl_(key, len, sp_)
 {
 }
 

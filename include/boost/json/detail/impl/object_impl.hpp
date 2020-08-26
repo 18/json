@@ -293,6 +293,7 @@ unchecked_object::
         {
             //p[0].~value(); // not needed
             p[1].~value();
+            p += 2;
         }
     }
 }

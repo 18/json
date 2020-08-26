@@ -71,12 +71,13 @@ class value
     friend struct detail::value_access;
 
     // VFALCO Replace friendship with value_access
-    friend class key_value_pair;
+    //friend class key_value_pair;
     // VFALCO Why are these in
     // detail/value.hpp instead of detail/value.ipp?
     inline value(detail::unchecked_object&& uo);
     inline value(detail::unchecked_array&& ua);
     inline value(char** key, std::size_t len, storage_ptr sp);
+    inline char const* release_key(std::size_t& len) noexcept;
 
 public:
     /** Destructor.
@@ -2704,6 +2705,11 @@ swap(value& lhs, value& rhs)
 */
 class key_value_pair
 {
+    inline
+    key_value_pair(
+        pilfered<json::value> k,
+        pilfered<json::value> v) noexcept;
+
 public:
     /** Copy assignment (deleted).
     */

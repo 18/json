@@ -367,6 +367,31 @@ destroy() noexcept
 
 //----------------------------------------------------------
 
+namespace detail {
+
+char const*
+value_access::
+release_key(
+    value& jv,
+    std::size_t& len) noexcept
+{
+    BOOST_ASSERT(jv.is_string());
+    return jv.str_.impl_.release_key(len);
+}
+
+} // detail
+
+key_value_pair::
+key_value_pair(
+    pilfered<json::value> key,
+    pilfered<json::value> value) noexcept
+    : value_(value)
+{
+    std::size_t len;
+    key_ = detail::value_access::release_key(key.get(), len);
+    len_ = static_cast<std::uint32_t>(len);
+}
+
 key_value_pair::
 ~key_value_pair()
 {

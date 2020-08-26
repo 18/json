@@ -196,7 +196,7 @@ public:
         std::size_t new_size,
         std::size_t capacity);
 
-    char*
+    char const*
     release_key(
         std::size_t& n) noexcept
     {

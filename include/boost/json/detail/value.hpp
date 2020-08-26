@@ -176,6 +176,13 @@ struct value_access
             value*>(::new(p) value(
             std::forward<Args>(args)...));
     }
+
+    static
+    inline
+    char const*
+    release_key(
+        value& jv,
+        std::size_t& len) noexcept;
 };
 
 } // detail
