@@ -21,46 +21,46 @@ namespace json {
 class value_builder_test
 {
 public:
-    // This is from the javadoc
-    void
-    testBuilder()
-    {
-    // This example builds a json::value without any dynamic memory allocations:
+    //// This is from the javadoc
+    //void
+    //testBuilder()
+    //{
+    //// This example builds a json::value without any dynamic memory allocations:
 
-    // Construct the builder using a local buffer
-    char temp[4096];
-    value_builder vb( storage_ptr(), temp, sizeof(temp) );
+    //// Construct the builder using a local buffer
+    //char temp[4096];
+    //value_builder vb( storage_ptr(), temp, sizeof(temp) );
 
-    // Create a monotonic resource with a local initial buffer
-    char buf[4096];
-    monotonic_resource mr( buf, sizeof(buf) );
+    //// Create a monotonic resource with a local initial buffer
+    //char buf[4096];
+    //monotonic_resource mr( buf, sizeof(buf) );
 
-    // The builder will create a value using `mr`
-    vb.reset(&mr);
+    //// The builder will create a value using `mr`
+    //vb.reset(&mr);
 
-    // Iteratively create the elements
-    vb.begin_object();
-    vb.insert_key("a");
-    vb.insert_int64(1);
-    vb.insert_key("b");
-    vb.insert_null();
-    vb.insert_key("c");
-    vb.insert_string("hello");
-    vb.end_object();
+    //// Iteratively create the elements
+    //vb.begin_object();
+    //vb.insert_key("a");
+    //vb.insert_int64(1);
+    //vb.insert_key("b");
+    //vb.insert_null();
+    //vb.insert_key("c");
+    //vb.insert_string("hello");
+    //vb.end_object();
 
-    // Take ownership of the value
-    value jv = vb.release();
+    //// Take ownership of the value
+    //value jv = vb.release();
 
-    assert( to_string(jv) == "{\"a\":1,\"b\":null,\"c\":\"hello\"}" );
+    //assert( to_string(jv) == "{\"a\":1,\"b\":null,\"c\":\"hello\"}" );
 
-    // At this point we could re-use the builder by calling reset
+    //// At this point we could re-use the builder by calling reset
 
-    }
+    //}
 
     void
     run()
     {
-        testBuilder();
+        //testBuilder();
     }
 };
 

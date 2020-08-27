@@ -149,9 +149,9 @@ class null_parser
         bool on_document_begin( error_code& ) { return true; }
         bool on_document_end( error_code& ) { return true; }
         bool on_object_begin( error_code& ) { return true; }
-        bool on_object_end( error_code& ) { return true; }
+        bool on_object_end( std::size_t, error_code& ) { return true; }
         bool on_array_begin( error_code& ) { return true; }
-        bool on_array_end( error_code& ) { return true; }
+        bool on_array_end( std::size_t, error_code& ) { return true; }
         bool on_key_part( string_view, error_code& ) { return true; }
         bool on_key( string_view, error_code& ) { return true; }
         bool on_string_part( string_view, error_code& ) { return true; }
@@ -242,6 +242,7 @@ class fail_parser
 
         bool
         on_object_end(
+            std::size_t,
             error_code& ec)
         {
             return maybe_fail(ec);
@@ -256,6 +257,7 @@ class fail_parser
 
         bool
         on_array_end(
+            std::size_t,
             error_code& ec)
         {
             return maybe_fail(ec);
@@ -472,6 +474,7 @@ class throw_parser
 
         bool
         on_object_end(
+            std::size_t,
             error_code&)
         {
             return maybe_throw();
@@ -486,6 +489,7 @@ class throw_parser
 
         bool
         on_array_end(
+            std::size_t,
             error_code&)
         {
             return maybe_throw();
