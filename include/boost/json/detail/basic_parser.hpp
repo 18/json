@@ -100,14 +100,14 @@ namespace json {
         // Called when the beginning of an object is encountered.
         bool on_object_begin( error_code& ec );
 
-        // Called when the end of the current object is encountered.
-        bool on_object_end( error_code& ec );
+        // Called when the end of the current object is encountered with the number of elements.
+        bool on_object_end( std::size_t n, error_code& ec );
 
         // Called when the beginning of an array is encountered.
         bool on_array_begin( error_code& ec );
 
-        // Called when the end of the current array is encountered.
-        bool on_array_end( error_code& ec );
+        // Called when the end of the current array is encountered with the number of elements.
+        bool on_array_end( std::size_t n, error_code& ec );
 
         // Called with characters corresponding to part of the current key.
         bool on_key_part( string_view s, error_code& ec );
