@@ -1509,6 +1509,6 @@ public:
     }
 };
 
-TEST_SUITE(basic_parser_test, "boost.json.basic_parser");
+//TEST_SUITE(basic_parser_test, "boost.json.basic_parser");
 
 BOOST_JSON_NS_END

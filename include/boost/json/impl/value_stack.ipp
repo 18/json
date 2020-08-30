@@ -81,6 +81,14 @@ has_chars()
     return chars_ != 0;
 }
 
+std::size_t
+value_stack::
+stack::
+chars() const noexcept
+{
+    return chars_;
+}
+
 //--------------------------------------
 
 // destroy the values but
@@ -98,7 +106,6 @@ clear() noexcept
                 it->~value();
         top_ = begin_;
     }
-    chars_ = 0;
 }
 
 void
@@ -116,7 +123,7 @@ value_stack::
 stack::
 grow_one()
 {
-    BOOST_ASSERT(chars_ == 0);
+    //BOOST_ASSERT(chars_ == 0);
     std::size_t const capacity =
         end_ - begin_;
     std::size_t new_cap = min_size_;
@@ -147,13 +154,15 @@ grow_one()
 void
 value_stack::
 stack::
-grow(std::size_t nchars)
+grow(
+    std::size_t nchars,
+    std::size_t total)
 {
     // needed capacity in values
     std::size_t const needed =
         size() +
         1 +
-        ((chars_ + nchars +
+        ((total +
             sizeof(value) - 1) /
                 sizeof(value));
     std::size_t const capacity =
@@ -172,8 +181,7 @@ grow(std::size_t nchars)
     {
         std::size_t amount =
             size() * sizeof(value);
-        if(chars_ > 0)
-            amount += sizeof(value) + chars_;
+        amount += sizeof(value) + nchars;
         std::memcpy(
             reinterpret_cast<char*>(begin),
             reinterpret_cast<char*>(begin_),
@@ -193,7 +201,9 @@ grow(std::size_t nchars)
 void
 value_stack::
 stack::
-append(string_view s)
+append(
+    string_view s,
+    std::size_t n)
 {
     std::size_t const bytes_avail =
         reinterpret_cast<
@@ -203,22 +213,20 @@ append(string_view s)
     // make sure there is room for
     // pushing one more value without
     // clobbering the string.
-    if(sizeof(value) + chars_ +
-            s.size() > bytes_avail)
-        grow(s.size());
+    if(sizeof(value) + n > bytes_avail)
+        grow(s.size(), n);
 
     // copy the new piece
     std::memcpy(
         reinterpret_cast<char*>(
-            top_ + 1) + chars_,
+            top_ + 1) + (n - s.size()),
         s.data(), s.size());
-    chars_ += s.size();
 
     // ensure a pushed value cannot
     // clobber the released string.
     BOOST_ASSERT(
         reinterpret_cast<char*>(
-            top_ + 1) + chars_ <=
+            top_ + 1) + n <=
         reinterpret_cast<char*>(
             end_));
 }
@@ -226,17 +234,16 @@ append(string_view s)
 string_view
 value_stack::
 stack::
-release_string() noexcept
+release_string(
+    std::size_t n) noexcept
 {
     // ensure a pushed value cannot
     // clobber the released string.
     BOOST_ASSERT(
         reinterpret_cast<char*>(
-            top_ + 1) + chars_ <=
+            top_ + 1) + n <=
         reinterpret_cast<char*>(
             end_));
-    auto const n = chars_;
-    chars_ = 0;
     return { reinterpret_cast<
         char const*>(top_ + 1), n };
 }
@@ -249,7 +256,6 @@ stack::
 release(std::size_t n) noexcept
 {
     BOOST_ASSERT(n <= size());
-    BOOST_ASSERT(chars_ == 0);
     top_ -= n;
     return top_;
 }
@@ -260,7 +266,6 @@ value_stack::
 stack::
 push(Args&&... args)
 {
-    BOOST_ASSERT(chars_ == 0);
     if(top_ >= end_)
         grow_one();
     value& jv = detail::value_access::
@@ -276,7 +281,6 @@ value_stack::
 stack::
 exchange(Unchecked&& u)
 {
-    BOOST_ASSERT(chars_ == 0);
     union U
     {
         value v;
@@ -378,27 +382,30 @@ push_object(std::size_t n)
 void
 value_stack::
 push_chars(
-    string_view s)
+    string_view s,
+    std::size_t n)
 {
-    st_.append(s);
+    st_.append(s, n);
 }
 
 void
 value_stack::
 push_key(
-    string_view s)
+    string_view s,
+    std::size_t n)
 {
-    if(! st_.has_chars())
+    if(BOOST_JSON_LIKELY(
+        s.size() == n))
     {
-        // fast path
         char* dest = nullptr;
-        st_.push(&dest, s.size(), sp_);
+        st_.push(&dest, n, sp_);
         std::memcpy(
-            dest, s.data(), s.size());
+            dest, s.data(), n);
         return;
     }
-
-    auto part = st_.release_string();
+    BOOST_ASSERT(n > s.size());
+    auto part = st_.release_string(
+        n - s.size());
     char* dest = nullptr;
     st_.push(&dest,
         part.size() + s.size(), sp_);
@@ -411,20 +418,22 @@ push_key(
 void
 value_stack::
 push_string(
-    string_view s)
+    string_view s,
+    std::size_t n)
 {
-    if(! st_.has_chars())
+    if(BOOST_JSON_LIKELY(
+        s.size() == n))
     {
-        // fast path
         st_.push(s, sp_);
         return;
     }
-
     // VFALCO We could add a special
     // private ctor to string that just
     // creates uninitialized space,
     // to reduce member function calls.
-    auto part = st_.release_string();
+    BOOST_ASSERT(n > s.size());
+    auto part = st_.release_string(
+        n - s.size());
     auto& str = st_.push(
         string_kind, sp_).get_string();
     str.reserve(
