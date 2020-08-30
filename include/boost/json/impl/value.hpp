@@ -64,10 +64,39 @@ value(detail::unchecked_array&& ua)
 
 value::
 value(
-    char** key,
-    std::size_t len,
-    storage_ptr sp)
-    : str_(key, len, std::move(sp))
+    string_view s, 
+    detail::string_tag,
+    const storage_ptr& sp)
+    : str_(s, detail::string_tag(), sp)
+{
+}
+
+value::
+value(
+    string_view s, 
+    detail::key_tag,
+    const storage_ptr& sp)
+    : str_(s, detail::key_tag(), sp)
+{
+}
+
+value::
+value(
+    string_view s1, 
+    string_view s2, 
+    detail::string_tag,
+    const storage_ptr& sp)
+    : str_(s1, s2, detail::string_tag(), sp)
+{
+}
+
+value::
+value(
+    string_view s1, 
+    string_view s2,
+    detail::key_tag,
+    const storage_ptr& sp)
+    : str_(s1, s2, detail::key_tag(), sp)
 {
 }
 

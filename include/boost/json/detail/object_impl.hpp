@@ -1,5 +1,6 @@
 //
 // Copyright (c) 2019 Vinnie Falco (vinnie.falco@gmail.com)
+// Copyright (c) 2020 Krystian Stasiowski (sdkrystian@gmail.com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -24,7 +25,54 @@ class key_value_pair;
 
 namespace detail {
 
-class unchecked_object;
+class unchecked_object
+{
+    // each element is two values,
+    // first one is a string key,
+    // second one is the value.
+    value* data_;
+    std::size_t size_;
+    storage_ptr const& sp_;
+
+public:
+    inline
+    ~unchecked_object();
+
+    unchecked_object(
+        value* data,
+        std::size_t size, // # of kv-pairs
+        storage_ptr const& sp) noexcept
+        : data_(data)
+        , size_(size)
+        , sp_(sp)
+    {
+    }
+
+    unchecked_object(
+        const unchecked_object&) = delete;
+
+    storage_ptr const&
+    storage() const noexcept
+    {
+        return sp_;
+    }
+
+    std::size_t
+    size() const noexcept
+    {
+        return size_;
+    }
+
+    value*
+    release() noexcept
+    {
+        auto const data = data_;
+        data_ = nullptr;
+        return data;
+    }
+};
+
+//----------------------------------------------------------
 
 class object_impl
 {
@@ -50,6 +98,11 @@ public:
         std::uintptr_t salt,
         storage_ptr const& sp);
 
+    inline
+    object_impl(
+        unchecked_object&& uo,
+        const storage_ptr& sp);
+    
     inline
     object_impl(object_impl&& other) noexcept;
 
@@ -194,61 +247,6 @@ private:
     };
 
     table* tab_ = nullptr;
-};
-
-//----------------------------------------------------------
-
-class unchecked_object
-{
-    // each element is two values,
-    // first one is a string key,
-    // second one is the value.
-    value* data_;
-    std::size_t size_;
-    storage_ptr const& sp_;
-
-public:
-    inline
-    ~unchecked_object();
-
-    unchecked_object(
-        value* data,
-        std::size_t size, // # of kv-pairs
-        storage_ptr const& sp) noexcept
-        : data_(data)
-        , size_(size)
-        , sp_(sp)
-    {
-    }
-
-    unchecked_object(
-        unchecked_object&& other) noexcept
-        : data_(other.data_)
-        , size_(other.size_)
-        , sp_(other.sp_)
-    {
-        other.data_ = nullptr;
-    }
-
-    storage_ptr const&
-    storage() const noexcept
-    {
-        return sp_;
-    }
-
-    std::size_t
-    size() const noexcept
-    {
-        return size_;
-    }
-
-    value*
-    release() noexcept
-    {
-        auto const data = data_;
-        data_ = nullptr;
-        return data;
-    }
 };
 
 //----------------------------------------------------------

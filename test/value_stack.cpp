@@ -31,8 +31,7 @@ public:
     // This example builds a json::value without any dynamic memory allocations:
 
     // Construct the value stack using a local buffer
-    char temp[4096];
-    value_stack st( storage_ptr(), temp, sizeof(temp) );
+    value_stack st;
 
     // Create a static resource with a local initial buffer
     char buf[4096];
@@ -42,16 +41,16 @@ public:
     st.reset(&mr);
 
     // Push the key/value pair "a":1.
-    st.push_key("a");
+    st.push_key("a", 1);
     st.push_int64(1);
 
     // Push "b":null
-    st.push_key("b");
+    st.push_key("b", 1);
     st.push_null();
 
     // Push "c":"hello"
-    st.push_key("c");
-    st.push_string("hello");
+    st.push_key("c", 1);
+    st.push_string("hello", 5);
 
     // Pop the three key/value pairs and push an object with those three values.
     st.push_object(3);
@@ -97,7 +96,7 @@ public:
         st.reset();
 
         // Place a key/value pair onto the stack
-        st.push_key( "x" );
+        st.push_key( "x", 1 );
         st.push_bool( true );
 
         // Replace the key/value pair with an object containing a single element

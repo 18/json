@@ -59,15 +59,12 @@ BOOST_JSON_NS_BEGIN
     The parser may dynamically allocate temporary
     storage as needed to accommodate the nesting level
     of the JSON being parsed. Temporary storage is
-    first obtained from an optional, caller-owned
-    buffer specified upon construction. When that
-    is exhausted, the next allocation uses the
-    @ref memory_resource passed to the constructor; if
-    no such argument is specified, the default memory
-    resource is used instead. Temporary storage is
-    freed only when the parser is destroyed, improving
-    performance when the parser is reused to parse
-    multiple JSONs.
+    obtained from the @ref memory_resource passed
+    to the constructor; if no such argument is specified,
+    the default memory resource is used instead.
+    Temporary storage is freed only when the parser
+    is destroyed, improving performance when
+    the parser is reused to parse multiple JSONs.
 \n
     It is important to note that the @ref memory_resource
     supplied upon construction is used for temporary
@@ -152,21 +149,13 @@ public:
         can allow non-standard JSON extensions such
         as comments or trailing commas, and
 
-        @li A caller-owned temporary buffer to use
-        before allocating with the memory
-        resource specified on construction.
-
         @par Example
 
         The following code constructs a parser which
-        uses the default memory resource and a local
-        buffer for temporary storage, and allows
+        uses the default memory resource and allows
         trailing commas to appear in the JSON:
 
         @code
-
-        // this buffer will be used for temporary storage
-        char temp[ 4096 ];
 
         // default constructed parse options allow strict JSON
         parse_options opt;
@@ -177,10 +166,9 @@ public:
         // construct the parser
         parser p(
             storage_ptr(),  // use the default memory resource
-            opt,
-            temp, sizeof(temp) );
+            opt);
 
-        // to begin parsing, reset must becalled
+        // to begin parsing, reset must be called
         p.reset();
 
         @endcode
@@ -201,24 +189,11 @@ public:
         parameter is omitted, a default constructed
         parse options is used, which allows only strict
         JSON and an implementation defined maximum depth.
-
-        @param temp_buffer A pointer to valid memory
-        which the implementation will use first to
-        acquire temporary storage, or `nullptr` for
-        the implementation to go directoy to the
-        memory resource. If this parameter is left out
-        the behavior is the same as if it were null.
-
-        @param temp_size The size of the memory pointed
-        to by `temp_buffer`. This parameter is ignored
-        if `temp_buffer` is null.
     */
     BOOST_JSON_DECL
     parser(
         storage_ptr sp = {},
-        parse_options const& opt = {},
-        void* temp_buffer = nullptr,
-        std::size_t temp_size = 0) noexcept;
+        parse_options const& opt = {}) noexcept;
 
     /** Returns the current depth of the JSON being parsed.
 

@@ -48,6 +48,38 @@ object_impl(
 }
 
 object_impl::
+object_impl(
+    unchecked_object&& uo,
+    const storage_ptr& sp)
+{
+    std::size_t capacity = uo.size();
+    if(BOOST_JSON_LIKELY(capacity > 0))
+    {
+        const unsigned long long* prime = 
+            +bucket_sizes();
+        while(capacity > *prime)
+            ++prime;
+        capacity = *prime;
+        const std::size_t bytes = 
+            sizeof(table) + 
+            capacity *
+                (sizeof(value_type) + 
+                sizeof(index_t));
+        tab_ = ::new(sp->allocate(bytes)) 
+            table{uo.size(), capacity, 
+                static_cast<std::size_t>(prime - bucket_sizes()), 
+                reinterpret_cast<std::uintptr_t>(this)};
+        // capacity == buckets()
+        std::memset(reinterpret_cast<value_type*>(tab_ + 1) +
+            capacity, 0xff, capacity * sizeof(index_t));
+        if(sp.is_not_counted_and_deallocate_is_trivial())
+            build<false>(std::move(uo));
+        else
+            build<true>(std::move(uo));
+    }
+}
+
+object_impl::
 object_impl(object_impl&& other) noexcept
     : tab_(detail::exchange(
         other.tab_, nullptr))
@@ -77,8 +109,6 @@ build(unchecked_object&& uo) noexcept
     auto src = uo.release();
     auto const end = src + 2 * uo.size();
     auto dest = begin();
-    if(src == end)
-        return;
     while(src != end)
     {
         value_access::construct_key_value_pair(
@@ -106,6 +136,7 @@ build(unchecked_object&& uo) noexcept
             std::memcpy(
                 reinterpret_cast<void*>(&dup),
                     dest, sizeof(dup));
+            --tab_->size;
         }
         else
         {
@@ -114,7 +145,6 @@ build(unchecked_object&& uo) noexcept
             ++dest;
         }
     }
-    tab_->size = dest - begin();
 }
 
 // does not check for dupes

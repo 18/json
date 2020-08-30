@@ -1,5 +1,6 @@
 //
 // Copyright (c) 2019 Vinnie Falco (vinnie.falco@gmail.com)
+// Copyright (c) 2020 Krystian Stasiowski (sdkrystian@gmail.com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -117,45 +118,27 @@ BOOST_JSON_NS_BEGIN
 */
 class value_stack
 {
-    class stack
-    {
-        enum
-        {
-            min_size_ = 16
-        };
+    constexpr
+    static
+    std::size_t
+    min_capacity = sizeof(value) * 16; 
 
-        storage_ptr sp_;
-        void* temp_;
-        value* begin_;
-        value* top_;
-        value* end_;
-        // string starts at top_+1
-        std::size_t chars_ = 0;
-        bool run_dtors_ = false;
+    storage_ptr value_sp_;
+    storage_ptr stack_sp_;
+    value* base_ = nullptr;
+    value* top_ = nullptr;
+    value* end_ = nullptr;
 
-    public:
-        inline ~stack();
-        inline stack(
-            storage_ptr sp,
-            void* temp, std::size_t size) noexcept;
-        inline void run_dtors(bool b) noexcept;
-        inline std::size_t size() const noexcept;
-        inline bool has_chars();
+    inline void clear() noexcept;
+    inline void grow();
+    inline void grow(
+        std::size_t current, 
+        std::size_t total);
 
-        inline void clear() noexcept;
-        inline void maybe_grow();
-        inline void grow_one();
-        inline void grow(std::size_t nchars);
+    inline string_view release_string(std::size_t n) noexcept;
+    template<class... Args> void push(Args&&... args);
+    template<class Unchecked> void exchange(Unchecked&& u);
 
-        inline void append(string_view s);
-        inline string_view release_string() noexcept;
-        inline value* release(std::size_t n) noexcept;
-        template<class... Args> value& push(Args&&... args);
-        template<class Unchecked> void exchange(Unchecked&& u);
-    };
-
-    stack st_;
-    storage_ptr sp_;
 
 public:
     /** Destructor.
@@ -180,21 +163,9 @@ public:
         to use for intermediate storage allocations. If
         this argument is omitted, the default memory
         resource is used.
-
-        @param temp_buffer A pointer to a caller-owned
-        buffer which will be used to store temporary
-        data used while building the value. If this
-        pointer is null, the builder will use the
-        storage pointer to allocate temporary data.
-
-        @param temp_size The number of valid bytes of
-        storage pointed to by `temp_buffer`.
     */
     BOOST_JSON_DECL
-    value_stack(
-        storage_ptr sp = {},
-        void* temp_buffer = nullptr,
-        std::size_t temp_size = 0) noexcept;
+    value_stack(storage_ptr sp = {}) noexcept;
 
     /** Prepare to build a new document.
 
@@ -346,7 +317,7 @@ public:
         string part is placed onto the stack, the only
         valid stack operations are:
 
-        @li @ref push_chars to append additional
+        @li @ref push_part to append additional
         characters to the key or string being built,
 
         @li @ref push_key or @ref push_string to
@@ -359,11 +330,13 @@ public:
         Calls to `memory_resource::allocate` may throw.
 
         @param s The characters to append. This may be empty.
+        @param n The total size of the string, including `s.size()`.
     */
     BOOST_JSON_DECL
     void
-    push_chars(
-        string_view s);
+    push_part(
+        string_view s,
+        std::size_t n);
 
     /** Push a key onto the stack.
 
@@ -379,11 +352,13 @@ public:
         Calls to `memory_resource::allocate` may throw.
 
         @param s The characters to append. This may be empty.
+        @param n The total size of the key, including `s.size()`.
     */
     BOOST_JSON_DECL
     void
     push_key(
-        string_view s);
+        string_view s,
+        std::size_t n);
 
     /** Place a string value onto the stack.
 
@@ -399,11 +374,13 @@ public:
         Calls to `memory_resource::allocate` may throw.
 
         @param s The characters to append. This may be empty.
+        @param n The total size of the string, including `s.size()`.
     */
     BOOST_JSON_DECL
     void
     push_string(
-        string_view s);
+        string_view s,
+        std::size_t n);
 
     /** Push a number onto the stack
 
@@ -418,8 +395,7 @@ public:
     */
     BOOST_JSON_DECL
     void
-    push_int64(
-        int64_t i);
+    push_int64(int64_t i);
 
     /** Push a number onto the stack
 
@@ -434,8 +410,7 @@ public:
     */
     BOOST_JSON_DECL
     void
-    push_uint64(
-        uint64_t u);
+    push_uint64(uint64_t u);
 
     /** Push a number onto the stack
 
@@ -450,8 +425,7 @@ public:
     */
     BOOST_JSON_DECL
     void
-    push_double(
-        double d);
+    push_double(double d);
 
     /** Push a `bool` onto the stack
 
@@ -466,8 +440,7 @@ public:
     */
     BOOST_JSON_DECL
     void
-    push_bool(
-        bool b);
+    push_bool(bool b);
 
     /** Push a null onto the stack
 

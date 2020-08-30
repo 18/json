@@ -80,10 +80,8 @@ undo_insert::
 array::
 array(detail::unchecked_array&& ua)
     : sp_(ua.storage())
-    , impl_(ua.size(), sp_) // exact
+    , impl_(std::move(ua), sp_)
 {
-    impl_.size(ua.size());
-    ua.relocate(impl_.data());
 }
 
 array::
