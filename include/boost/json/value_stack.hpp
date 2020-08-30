@@ -142,14 +142,15 @@ class value_stack
         inline void run_dtors(bool b) noexcept;
         inline std::size_t size() const noexcept;
         inline bool has_chars();
+        inline std::size_t chars() const noexcept;
 
         inline void clear() noexcept;
         inline void maybe_grow();
         inline void grow_one();
-        inline void grow(std::size_t nchars);
+        inline void grow(std::size_t n, std::size_t total);
 
-        inline void append(string_view s);
-        inline string_view release_string() noexcept;
+        inline void append(string_view s, std::size_t n);
+        inline string_view release_string(std::size_t n) noexcept;
         inline value* release(std::size_t n) noexcept;
         template<class... Args> value& push(Args&&... args);
         template<class Unchecked> void exchange(Unchecked&& u);
@@ -361,11 +362,13 @@ public:
         Calls to `memory_resource::allocate` may throw.
 
         @param s The characters to append. This may be empty.
+        @param n The total size of the string, including `s.size()`.
     */
     BOOST_JSON_DECL
     void
     push_chars(
-        string_view s);
+        string_view s,
+        std::size_t n);
 
     /** Push a key onto the stack.
 
@@ -381,11 +384,13 @@ public:
         Calls to `memory_resource::allocate` may throw.
 
         @param s The characters to append. This may be empty.
+        @param n The total size of the key, including `s.size()`.
     */
     BOOST_JSON_DECL
     void
     push_key(
-        string_view s);
+        string_view s,
+        std::size_t n);
 
     /** Place a string value onto the stack.
 
@@ -401,11 +406,13 @@ public:
         Calls to `memory_resource::allocate` may throw.
 
         @param s The characters to append. This may be empty.
+        @param n The total size of the string, including `s.size()`.
     */
     BOOST_JSON_DECL
     void
     push_string(
-        string_view s);
+        string_view s,
+        std::size_t n);
 
     /** Push a number onto the stack
 

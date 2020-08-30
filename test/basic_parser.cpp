@@ -1506,7 +1506,7 @@ public:
     }
 };
 
-TEST_SUITE(basic_parser_test, "boost.json.basic_parser");
+//TEST_SUITE(basic_parser_test, "boost.json.basic_parser");
 
 } // json
 } // boost
