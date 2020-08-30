@@ -78,7 +78,29 @@ class value
     // detail/value.hpp instead of detail/value.ipp?
     inline value(detail::unchecked_object&& uo);
     inline value(detail::unchecked_array&& ua);
-    inline value(char** key, std::size_t len, storage_ptr sp);
+
+    inline value(
+        string_view s, 
+        detail::string_tag,
+        const storage_ptr& sp);
+
+    inline value(
+        string_view s, 
+        detail::key_tag,
+        const storage_ptr& sp);
+
+    inline value(
+        string_view s1, 
+        string_view s2, 
+        detail::string_tag,
+        const storage_ptr& sp);
+
+    inline value(
+        string_view s1, 
+        string_view s2, 
+        detail::key_tag,
+        const storage_ptr& sp);
+
     inline char const* release_key(std::size_t& len) noexcept;
 
 public:

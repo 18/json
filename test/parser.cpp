@@ -35,9 +35,6 @@ public:
         // parser::parser
         {
 
-        // this buffer will be used for temporary storage
-        unsigned char temp[ 4096 ];
-
         // default constructed parse options allow strict JSON
         parse_options opt;
 
@@ -47,8 +44,7 @@ public:
         // construct the parser
         parser p(
             storage_ptr(),  // use the default memory resource
-            opt,
-            temp, sizeof(temp) );
+            opt);
 
         // to begin parsing, reset must becalled
         p.reset();
@@ -707,60 +703,20 @@ public:
     void
     testCtors()
     {
+        // parser()
         {
-            unsigned char buf[256];
-
-            // parser()
-            {
-                parser p;
-            }
-
-            // parser(storage_ptr)
-            {
-                parser p( storage_ptr{} );
-            }
-
-            // parser(storage_ptr, parse_options)
-            {
-                parser p( storage_ptr{}, parse_options{} );
-            }
-
-            // parser(storage_ptr, parse_options, unsigned char*, std::size_t)
-            {
-                parser p( storage_ptr(), parse_options(), &buf[0], sizeof(buf) );
-            }
-
-            // parser(storage_ptr, parse_options, unsigned char[])
-            {
-                parser p( storage_ptr(), parse_options(), buf);
-            }
-
-            // parser(storage_ptr, parse_options, unsigned char[], std::size_t)
-            {
-                parser p( storage_ptr(), parse_options(), buf, sizeof(buf));
-            }
+            parser p;
         }
 
-#ifdef __cpp_lib_byte
+        // parser(storage_ptr)
         {
-            std::byte buf[256];
-
-            // parser(storage_ptr, parse_options, std::byte*, std::size_t)
-            {
-                parser p( storage_ptr(), parse_options(), &buf[0], sizeof(buf) );
-            }
-
-            // parser(storage_ptr, parse_options, std::byte[])
-            {
-                parser p( storage_ptr(), parse_options(), buf);
-            }
-
-            // parser(storage_ptr, parse_options, std::byte[], std::size_t)
-            {
-                parser p( storage_ptr(), parse_options(), buf, sizeof(buf));
-            }
+            parser p( storage_ptr{} );
         }
-#endif
+
+        // parser(storage_ptr, parse_options)
+        {
+            parser p( storage_ptr{}, parse_options{} );
+        }
     }
 
     void

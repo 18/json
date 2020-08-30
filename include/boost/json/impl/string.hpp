@@ -17,11 +17,43 @@ BOOST_JSON_NS_BEGIN
 
 string::
 string(
-    char** key,
-    std::size_t len,
+    string_view s,
+    detail::string_tag,
     storage_ptr sp)
     : sp_(std::move(sp))
-    , impl_(key, len, sp_)
+    , impl_(s, detail::string_tag(), sp_)
+{
+}
+
+string::
+string(
+    string_view s, 
+    detail::key_tag,
+    storage_ptr sp)
+    : sp_(std::move(sp))
+    , impl_(s, detail::key_tag(), sp_)
+{
+}
+
+string::
+string(
+    string_view s1, 
+    string_view s2, 
+    detail::string_tag,
+    storage_ptr sp)
+    : sp_(std::move(sp))
+    , impl_(s1, s2, detail::string_tag(), sp_)
+{
+}
+
+string::
+string(
+    string_view s1, 
+    string_view s2,
+    detail::key_tag,
+    storage_ptr sp)
+    : sp_(std::move(sp))
+    , impl_(s1, s2, detail::key_tag(), sp_)
 {
 }
 

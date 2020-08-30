@@ -12,6 +12,7 @@
 #define BOOST_JSON_DETAIL_STRING_IMPL_HPP
 
 #include <boost/json/detail/config.hpp>
+#include <boost/json/detail/value.hpp>
 #include <boost/json/kind.hpp>
 #include <boost/json/storage_ptr.hpp>
 #include <algorithm>
@@ -114,8 +115,28 @@ public:
 
     BOOST_JSON_DECL
     string_impl(
-        char** dest,
-        std::size_t len,
+        string_view s,
+        string_tag,
+        storage_ptr const& sp);
+
+    BOOST_JSON_DECL
+    string_impl(
+        string_view s,
+        key_tag,
+        storage_ptr const& sp);
+
+     BOOST_JSON_DECL
+    string_impl(
+        string_view s1,
+        string_view s2,
+        string_tag,
+        storage_ptr const& sp);
+
+    BOOST_JSON_DECL
+    string_impl(
+        string_view s1,
+        string_view s2,
+        key_tag,
         storage_ptr const& sp);
 
     template<class InputIt>

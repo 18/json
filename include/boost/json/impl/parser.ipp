@@ -82,10 +82,10 @@ parser::
 handler::
 on_key_part(
     string_view s,
-    std::size_t,
+    std::size_t n,
     error_code&)
 {
-    st.push_chars(s);
+    st.push_part(s, n);
     return true;
 }
         
@@ -94,10 +94,10 @@ parser::
 handler::
 on_key(
     string_view s,
-    std::size_t,
+    std::size_t n,
     error_code&)
 {
-    st.push_key(s);
+    st.push_key(s, n);
     return true;
 }
         
@@ -106,10 +106,10 @@ parser::
 handler::
 on_string_part(
     string_view s,
-    std::size_t, 
+    std::size_t n, 
     error_code&)
 {
-    st.push_chars(s);
+    st.push_part(s, n);
     return true;
 }
 
@@ -118,10 +118,10 @@ parser::
 handler::
 on_string(
     string_view s,
-    std::size_t, 
+    std::size_t n, 
     error_code&)
 {
-    st.push_string(s);
+    st.push_string(s, n);
     return true;
 }
 
@@ -214,26 +214,8 @@ on_comment(
 parser::
 parser(
     storage_ptr sp,
-    parse_options const& opt,
-    unsigned char* temp_buffer,
-    std::size_t temp_size) noexcept
-    : p_(
-        opt,
-        std::move(sp),
-        temp_buffer,
-        temp_size)
-{
-}
-
-parser::
-parser(
-    storage_ptr sp,
     parse_options const& opt) noexcept
-    : p_(
-        opt,
-        std::move(sp),
-        nullptr,
-        0)
+    : p_(opt, std::move(sp))
 {
 }
 

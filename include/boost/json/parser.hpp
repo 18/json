@@ -56,15 +56,12 @@ BOOST_JSON_NS_BEGIN
     The parser may dynamically allocate temporary
     storage as needed to accommodate the nesting level
     of the JSON being parsed. Temporary storage is
-    first obtained from an optional, caller-owned
-    buffer specified upon construction. When that
-    is exhausted, the next allocation uses the
-    @ref memory_resource passed to the constructor; if
-    no such argument is specified, the default memory
-    resource is used instead. Temporary storage is
-    freed only when the parser is destroyed, improving
-    performance when the parser is reused to parse
-    multiple JSONs.
+    obtained from the @ref memory_resource passed
+    to the constructor; if no such argument is specified,
+    the default memory resource is used instead.
+    Temporary storage is freed only when the parser
+    is destroyed, improving performance when
+    the parser is reused to parse multiple JSONs.
 \n
     It is important to note that the @ref memory_resource
     supplied upon construction is used for temporary
@@ -168,21 +165,13 @@ public:
         can allow non-standard JSON extensions such
         as comments or trailing commas, and
 
-        @li A caller-owned temporary buffer to use
-        before allocating with the memory
-        resource specified on construction.
-
         @par Example
 
         The following code constructs a parser which
-        uses the default memory resource and a local
-        buffer for temporary storage, and allows
+        uses the default memory resource and allows
         trailing commas to appear in the JSON:
 
         @code
-
-        // this buffer will be used for temporary storage
-        unsigned char temp[ 4096 ];
 
         // default constructed parse options allow strict JSON
         parse_options opt;
@@ -193,10 +182,9 @@ public:
         // construct the parser
         parser p(
             storage_ptr(),  // use the default memory resource
-            opt,
-            temp, sizeof(temp) );
+            opt);
 
-        // to begin parsing, reset must becalled
+        // to begin parsing, reset must be called
         p.reset();
 
         @endcode
@@ -215,151 +203,11 @@ public:
         parameter is omitted, a default constructed
         parse options is used, which allows only strict
         JSON and an implementation defined maximum depth.
-
-        @param temp_buffer A pointer to valid memory
-        which the implementation will use first to
-        acquire temporary storage, or `nullptr` for
-        the implementation to go directoy to the
-        memory resource. If this parameter is left out
-        the behavior is the same as if it were null.
-
-        @param temp_size The size of the memory pointed
-        to by `temp_buffer`. This parameter is ignored
-        if `temp_buffer` is null.
     */
     BOOST_JSON_DECL
     parser(
-        storage_ptr sp,
-        parse_options const& opt,
-        unsigned char* temp_buffer,
-        std::size_t temp_size) noexcept;
-
-    /** Constructor (delegating)
-
-        @par Effects
-        @code
-        parser( {}, {} )
-        @endcode
-    */
-    parser() noexcept
-        : parser({}, {})
-    {
-    }
-
-    /** Constructor (delegating)
-
-        @par Effects
-        @code
-        parser( std::move(sp), opt )
-        @endcode
-    */
-    BOOST_JSON_DECL
-    parser(
-        storage_ptr sp,
-        parse_options const& opt) noexcept;
-
-    /** Constructor (delegating)
-
-        @par Effects
-        @code
-        parser( std::move(sp), {}, nullptr, 0 )
-        @endcode
-    */
-    explicit
-    parser(storage_ptr sp) noexcept
-        : parser(std::move(sp), {})
-    {
-    }
-
-    /** Constructor (delegating)
-
-        @par Effects
-        @code
-        parser( std::move(sp), opt, &buffer[0], N )
-        @endcode
-    */
-    template<std::size_t N>
-    parser(
-        storage_ptr sp,
-        parse_options const& opt,
-        unsigned char(&buffer)[N]) noexcept
-        : parser(std::move(sp), opt,
-            &buffer[0], N)
-    {
-    }
-
-#if defined(__cpp_lib_byte) || defined(BOOST_JSON_DOCS)
-    /** Constructor (delegating)
-
-        @par Effects
-        @code
-        parser( std::move(sp), opt,
-                reinterpret_cast<unsigned char*>( temp_buffer ), N )
-        @endcode
-    */
-    parser(
-        storage_ptr sp,
-        parse_options const& opt,
-        std::byte* temp_buffer,
-        std::size_t temp_size) noexcept
-        : parser(sp, opt, reinterpret_cast<
-            unsigned char*>(temp_buffer),
-                temp_size)
-    {
-    }
-
-    /** Constructor (delegating)
-
-        @par Effects
-        @code
-        parser( std::move(sp), opt, &buffer[0], N )
-        @endcode
-    */
-    template<std::size_t N>
-    parser(
-        storage_ptr sp,
-        parse_options const& opt,
-        std::byte(&buffer)[N]) noexcept
-        : parser(std::move(sp), opt,
-            &buffer[0], N)
-    {
-    }
-#endif
-
-#ifndef BOOST_JSON_DOCS
-    // Safety net for accidental buffer overflows
-    template<std::size_t N>
-    parser(
-        storage_ptr sp,
-        parse_options const& opt,
-        unsigned char(&buffer)[N],
-        std::size_t n) noexcept
-        : parser(std::move(sp), opt,
-            &buffer[0], n)
-    {
-        // If this goes off, check your parameters
-        // closely, chances are you passed an array
-        // thinking it was a pointer.
-        BOOST_ASSERT(n <= N);
-    }
-
-#ifdef __cpp_lib_byte
-    // Safety net for accidental buffer overflows
-    template<std::size_t N>
-    parser(
-        storage_ptr sp,
-        parse_options const& opt,
-        std::byte(&buffer)[N], std::size_t n) noexcept
-        : parser(std::move(sp), opt,
-            &buffer[0], n)
-    {
-        // If this goes off, check your parameters
-        // closely, chances are you passed an array
-        // thinking it was a pointer.
-        BOOST_ASSERT(n <= N);
-    }
-#endif
-#endif
+        storage_ptr sp = {},
+        parse_options const& opt = {}) noexcept;
 
     /** Returns the current depth of the JSON being parsed.
 

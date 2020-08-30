@@ -42,12 +42,31 @@ array_impl(
             std::uint32_t>(capacity);
         tab_->size = 0;
     }
-    else
-    {
-        tab_ = nullptr;
-    }
 }
 
+array_impl::
+array_impl(
+    unchecked_array&& ua,
+    storage_ptr const& sp)
+{
+    const std::size_t n = ua.size();
+    if(BOOST_JSON_LIKELY(n > 0))
+    {
+        tab_ = ::new(sp->allocate(
+            (sizeof(table) +
+             n * sizeof(value) +
+             sizeof(table) + 1)
+                / sizeof(table)
+                * sizeof(table),
+            (std::max)(
+                alignof(table),
+                alignof(value)))) table{
+            static_cast<std::uint32_t>(n),
+            static_cast<std::uint32_t>(n)};
+        ua.relocate(reinterpret_cast<
+            value*>(tab_ + 1));
+    }
+}
 
 array_impl::
 array_impl(array_impl&& other) noexcept

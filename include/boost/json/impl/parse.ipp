@@ -24,11 +24,7 @@ parse(
     storage_ptr sp,
     const parse_options& opt)
 {
-    unsigned char temp[BOOST_JSON_STACK_BUFFER_SIZE];
-    parser p(
-        storage_ptr(),
-        opt,
-        temp, sizeof(temp));
+    parser p(storage_ptr(), opt);
     p.reset(std::move(sp));
     p.write(
         s.data(),
