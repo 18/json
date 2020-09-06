@@ -114,6 +114,12 @@ public:
         std::size_t len,
         storage_ptr const& sp);
 
+    BOOST_JSON_DECL
+    string_impl(
+        const char* src,
+        std::size_t len,
+        storage_ptr const& sp);
+
     template<class InputIt>
     string_impl(
         InputIt first,

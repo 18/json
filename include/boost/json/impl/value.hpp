@@ -71,6 +71,16 @@ value(
 {
 }
 
+value::
+value(
+    const char* key,
+    std::size_t len,
+    storage_ptr sp)
+    : str_(key, len, std::move(sp),
+        string::key_tag())
+{
+}
+
 template<class T, class>
 value&
 value::

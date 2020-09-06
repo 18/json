@@ -57,6 +57,7 @@ class value;
 class string
 {
     friend class value;
+    struct key_tag { };
 #ifndef BOOST_JSON_DOCS
     // VFALCO doc toolchain shouldn't show this but does
     friend struct detail::value_access;
@@ -67,6 +68,13 @@ class string
         char** key,
         std::size_t len,
         storage_ptr sp);
+
+    inline
+    string(
+        const char* key,
+        std::size_t len,
+        storage_ptr sp,
+        key_tag);
 
 public:
     /** The type of _Allocator_ returned by @ref get_allocator

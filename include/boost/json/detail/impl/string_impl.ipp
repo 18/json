@@ -87,6 +87,24 @@ string_impl(
     *dest = k_.s;
 }
 
+// construct a key and copy
+// in the pointed-to characters
+string_impl::
+string_impl(
+    const char* src,
+    std::size_t len,
+    storage_ptr const& sp)
+{
+    BOOST_ASSERT(len <= max_size());
+    k_.k = key_string_;
+    k_.n = static_cast<
+        std::uint32_t>(len);
+    k_.s = reinterpret_cast<
+        char*>(sp->allocate(len + 1));
+    std::memcpy(k_.s, src, len);
+    k_.s[len] = 0; // null term
+}
+
 std::uint32_t
 string_impl::
 growth(

@@ -310,9 +310,7 @@ push_key(
     if(BOOST_JSON_LIKELY(
         s.size() == n))
     {
-        char* dest = nullptr;
-        push(&dest, n);
-        std::memcpy(dest, s.data(), n);
+        push(s.data(), n);
         return;
     }
     BOOST_ASSERT(n > s.size());

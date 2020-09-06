@@ -78,7 +78,10 @@ class value
     // detail/value.hpp instead of detail/value.ipp?
     inline value(detail::unchecked_object&& uo);
     inline value(detail::unchecked_array&& ua);
+    // used when the current key is split
     inline value(char** key, std::size_t len, storage_ptr sp);
+    // used when the current key isn't split
+    inline value(const char* key, std::size_t len, storage_ptr sp);
     inline char const* release_key(std::size_t& len) noexcept;
 
 public:

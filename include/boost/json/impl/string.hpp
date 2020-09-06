@@ -25,6 +25,17 @@ string(
 {
 }
 
+string::
+string(
+    const char* key,
+    std::size_t len,
+    storage_ptr sp,
+    key_tag)
+    : sp_(std::move(sp))
+    , impl_(key, len, sp_)
+{
+}
+
 template<class InputIt, class>
 string::
 string(
