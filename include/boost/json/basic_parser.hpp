@@ -932,8 +932,8 @@ parse_string(const char* p)
                 IsKey, AllowBadUTF8>(p);
         }
     }
-    return parse_unescaped<true, 
-        IsKey, AllowBadUTF8>(p);
+    return BOOST_JSON_INLINE_CALL((parse_unescaped<
+        true, IsKey, AllowBadUTF8>(p)));
 }
 
 template<class Handler>
@@ -1517,8 +1517,8 @@ loop:
             BOOST_JSON_MAX_STRUCTURED_SIZE))
             return fail(cs.begin(), error::object_too_large);
 do_obj3:
-        cs = parse_string<StackEmpty, true,
-            AllowBadUTF8>(cs.begin());
+        cs = BOOST_JSON_INLINE_CALL((parse_string<
+            StackEmpty, true, AllowBadUTF8>(cs.begin())));
         if(BOOST_JSON_UNLIKELY(incomplete(cs)))
             return suspend_or_fail(state::obj3, size);
 do_obj4:

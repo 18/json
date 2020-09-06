@@ -196,6 +196,16 @@
 # endif
 #endif
 
+#ifndef BOOST_JSON_INLINE_CALL
+# if defined(__GNUC__) || defined(__clang__)
+#  define BOOST_JSON_INLINE_CALL(e) \
+    [&]() __attribute__((flatten, always_inline)) \
+    { return e; }()
+# else
+#  define BOOST_JSON_INLINE_CALL(e) e
+# endif
+#endif
+
 // These macros are private, for tests, do not change
 // them or else previously built libraries won't match.
 #ifndef  BOOST_JSON_MAX_STRUCTURED_SIZE
