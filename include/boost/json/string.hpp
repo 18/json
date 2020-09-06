@@ -62,26 +62,26 @@ class string
     friend struct detail::value_access;
 #endif
 
-    inline
+    BOOST_FORCEINLINE
     string(
         string_view s,
         detail::string_tag,
         storage_ptr sp);
 
-    inline
+    BOOST_FORCEINLINE
     string(
         string_view s, 
         detail::key_tag,
         storage_ptr sp);
 
-    inline
+    BOOST_FORCEINLINE
     string(
         string_view s1, 
         string_view s2,
         detail::string_tag,
         storage_ptr sp);
 
-    inline
+    BOOST_FORCEINLINE
     string(
         string_view s1, 
         string_view s2,
