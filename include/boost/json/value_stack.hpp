@@ -136,7 +136,7 @@ class value_stack
         std::size_t total);
 
     inline string_view release_string(std::size_t n) noexcept;
-    template<class... Args> value& push(Args&&... args);
+    template<class... Args> void push(Args&&... args);
     template<class Unchecked> void exchange(Unchecked&& u);
 
 

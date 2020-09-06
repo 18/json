@@ -119,17 +119,16 @@ release_string(
 }
 
 template<class... Args>
-value&
+void
 value_stack::
 push(Args&&... args)
 {
     BOOST_ASSERT(top_ <= end_);
     if(BOOST_JSON_UNLIKELY(top_ == end_))
         grow();
-    value& jv = detail::value_access::construct_value(
+    detail::value_access::construct_value(
         top_, std::forward<Args>(args)..., value_sp_);
     ++top_;
-    return jv;
 }
 
 template<class Unchecked>
