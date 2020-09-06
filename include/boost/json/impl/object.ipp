@@ -72,6 +72,7 @@ public:
 //
 //----------------------------------------------------------
 
+BOOST_FORCEINLINE
 object::
 object(detail::unchecked_object&& uo)
     : sp_(uo.storage())
