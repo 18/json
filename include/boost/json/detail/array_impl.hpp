@@ -88,7 +88,7 @@ public:
         std::size_t capacity,
         storage_ptr const& sp);
 
-    inline
+    BOOST_FORCEINLINE
     array_impl(
         unchecked_array&& ua,
         storage_ptr const& sp);

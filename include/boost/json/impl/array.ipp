@@ -77,6 +77,7 @@ undo_insert::
 //
 //----------------------------------------------------------
 
+BOOST_FORCEINLINE
 array::
 array(detail::unchecked_array&& ua)
     : sp_(ua.storage())
