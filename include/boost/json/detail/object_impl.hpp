@@ -222,13 +222,7 @@ public:
     }
 
     unchecked_object(
-        unchecked_object&& other) noexcept
-        : data_(other.data_)
-        , size_(other.size_)
-        , sp_(other.sp_)
-    {
-        other.data_ = nullptr;
-    }
+        const unchecked_object&) = delete;
 
     storage_ptr const&
     storage() const noexcept

@@ -136,13 +136,7 @@ public:
     }
 
     unchecked_array(
-        unchecked_array&& other) noexcept
-        : data_(other.data_)
-        , size_(other.size_)
-        , sp_(other.sp_)
-    {
-        other.data_ = nullptr;
-    }
+        const unchecked_array&) = delete;
 
     storage_ptr const&
     storage() const noexcept
