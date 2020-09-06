@@ -85,7 +85,7 @@ on_key_part(
     std::size_t n,
     error_code&)
 {
-    st.push_chars(s, n);
+    st.push_part(s, n);
     return true;
 }
         
@@ -109,7 +109,7 @@ on_string_part(
     std::size_t n, 
     error_code&)
 {
-    st.push_chars(s, n);
+    st.push_part(s, n);
     return true;
 }
 

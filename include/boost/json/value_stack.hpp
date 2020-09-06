@@ -328,7 +328,7 @@ public:
         string part is placed onto the stack, the only
         valid stack operations are:
 
-        @li @ref push_chars to append additional
+        @li @ref push_part to append additional
         characters to the key or string being built,
 
         @li @ref push_key or @ref push_string to
@@ -345,7 +345,7 @@ public:
     */
     BOOST_JSON_DECL
     void
-    push_chars(
+    push_part(
         string_view s,
         std::size_t n);
 

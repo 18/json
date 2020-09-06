@@ -269,7 +269,7 @@ push_object(std::size_t n)
 
 void
 value_stack::
-push_chars(
+push_part(
     string_view s,
     std::size_t n)
 {
