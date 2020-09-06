@@ -98,7 +98,7 @@ public:
         std::uintptr_t salt,
         storage_ptr const& sp);
 
-    inline
+    BOOST_FORCEINLINE
     object_impl(
         unchecked_object&& uo,
         const storage_ptr& sp);
@@ -176,6 +176,7 @@ public:
     }
 
     template<bool NeedDestroy>
+    BOOST_FORCEINLINE
     void
     build(unchecked_object&& uo) noexcept;
 
