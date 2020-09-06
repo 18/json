@@ -337,7 +337,9 @@ public:
         string_view s,
         std::size_t repeat) const override
     {
-        parser p;
+        parse_options opt;
+        opt.allow_invalid_utf8 = true;
+        parser p({}, opt);
         while(repeat--)
         {
             monotonic_resource mr;
