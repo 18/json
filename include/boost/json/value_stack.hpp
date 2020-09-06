@@ -130,7 +130,9 @@ class value_stack
 
     inline void clear() noexcept;
     inline void grow();
-    inline void grow(std::size_t n, std::size_t total);
+    inline void grow(
+        std::size_t current, 
+        std::size_t total);
 
     inline string_view release_string(std::size_t n) noexcept;
     template<class... Args> value& push(Args&&... args);

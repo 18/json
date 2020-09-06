@@ -61,11 +61,10 @@ grow()
     base_ = new_base;
 }
 
-// make room for n additional characters.
 void
 value_stack::
 grow(
-    std::size_t n,
+    std::size_t current,
     std::size_t total)
 {
     const std::size_t capacity =
@@ -85,8 +84,11 @@ grow(
         stack_sp_->allocate(new_cap));
     if(BOOST_JSON_LIKELY(base_))
     {
+        std::size_t copy = size;
+        if(current != 0)
+            copy += current + sizeof(value);
         std::memcpy(reinterpret_cast<char*>(new_base),
-            reinterpret_cast<char*>(base_), needed - n);
+            reinterpret_cast<char*>(base_), copy);
         stack_sp_->deallocate(base_, capacity);
     }
     // book-keeping
@@ -231,25 +233,17 @@ push_part(
     string_view s,
     std::size_t n)
 {
-    std::size_t const bytes_avail =
-        reinterpret_cast<
-            char const*>(end_) -
-        reinterpret_cast<
-            char const*>(top_);
+    const std::size_t str_capacity =
+        reinterpret_cast<char const*>(end_) -
+        reinterpret_cast<char const*>(top_);
+    // number of characters currently on the stack
+    const std::size_t current = n - s.size();
     // make sure there is room for
-    // pushing one more value without
-    // clobbering the string.
-    if(sizeof(value) + n > bytes_avail)
-        grow(s.size(), n);
-
-    // copy the new piece
-    std::memcpy(
-        reinterpret_cast<char*>(
-            top_ + 1) + (n - s.size()),
-        s.data(), s.size());
-
-    // ensure a pushed value cannot
-    // clobber the released string.
+    // pushing one more value and the string part
+    if(n + sizeof(value) > str_capacity)
+        grow(current, n);
+    std::memcpy(reinterpret_cast<char*>(top_ + 1) + 
+        current, s.data(), s.size());
     BOOST_ASSERT(
         reinterpret_cast<char*>(
             top_ + 1) + n <=
@@ -263,18 +257,17 @@ push_key(
     string_view s,
     std::size_t n)
 {
-    // fast path when s
-    // contains the full key
-    if(BOOST_JSON_LIKELY(
-        s.size() == n))
-    {
-        push(s, detail::key_tag());
-        return;
-    }
-    BOOST_ASSERT(n > s.size());
-    string_view part = 
-        release_string(n - s.size());
-    push(part, s, detail::key_tag());
+    // fast path when s is the full key
+    if(BOOST_JSON_UNLIKELY(top_ == end_))
+        grow();
+    if(BOOST_JSON_LIKELY(s.size() == n))
+        detail::value_access::construct_value(
+            top_, s, detail::key_tag(), value_sp_);
+    else
+         detail::value_access::construct_value(
+            top_, release_string(n - s.size()), 
+                s, detail::key_tag(), value_sp_);
+    ++top_;
 }
 
 void
@@ -283,18 +276,17 @@ push_string(
     string_view s,
     std::size_t n)
 {
-    // fast path when s
-    // contains the full string
-    if(BOOST_JSON_LIKELY(
-        s.size() == n))
-    {
-        push(s, detail::string_tag());
-        return;
-    }
-    BOOST_ASSERT(n > s.size());
-    string_view part = 
-        release_string(n - s.size());
-    push(part, s, detail::string_tag());
+    // fast path when s is the full string
+    if(BOOST_JSON_UNLIKELY(top_ == end_))
+        grow();
+    if(BOOST_JSON_LIKELY(s.size() == n))
+        detail::value_access::construct_value(
+            top_, s, detail::string_tag(), value_sp_);
+    else
+        detail::value_access::construct_value(
+            top_, release_string(n - s.size()), 
+                s, detail::string_tag(), value_sp_);
+    ++top_;
 }
 
 void
