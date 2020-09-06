@@ -268,19 +268,13 @@ push_key(
     if(BOOST_JSON_LIKELY(
         s.size() == n))
     {
-        char* dest = nullptr;
-        push(&dest, n);
-        std::memcpy(dest, s.data(), n);
+        push(s, detail::key_tag());
         return;
     }
     BOOST_ASSERT(n > s.size());
     string_view part = 
         release_string(n - s.size());
-    char* dest = nullptr;
-    push(&dest, part.size() + s.size());
-    std::memcpy(dest, part.data(), part.size());
-    std::memcpy(dest + part.size(),
-        s.data(), s.size());
+    push(part, s, detail::key_tag());
 }
 
 void
@@ -294,24 +288,13 @@ push_string(
     if(BOOST_JSON_LIKELY(
         s.size() == n))
     {
-        push(s);
+        push(s, detail::string_tag());
         return;
     }
-    // VFALCO We could add a special
-    // private ctor to string that just
-    // creates uninitialized space,
-    // to reduce member function calls.
     BOOST_ASSERT(n > s.size());
     string_view part = 
         release_string(n - s.size());
-    string& str = 
-        push(string_kind).get_string();
-    str.reserve(part.size() + s.size());
-    std::memcpy(str.data(),
-        part.data(), part.size());
-    std::memcpy(str.data() + part.size(),
-        s.data(), s.size());
-    str.grow(part.size() + s.size());
+    push(part, s, detail::string_tag());
 }
 
 void

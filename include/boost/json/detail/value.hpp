@@ -18,6 +18,9 @@
 BOOST_JSON_NS_BEGIN
 namespace detail {
 
+struct string_tag { };
+struct key_tag { };
+
 struct int64_k
 {
     storage_ptr sp; // must come first

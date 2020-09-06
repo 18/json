@@ -12,6 +12,7 @@
 #define BOOST_JSON_DETAIL_IMPL_STRING_IMPL_IPP
 
 #include <boost/json/detail/string_impl.hpp>
+#include <boost/json/string_view.hpp>
 #include <boost/json/detail/except.hpp>
 #include <cstring>
 #include <functional>
@@ -70,21 +71,112 @@ string_impl(
     }
 }
 
-// construct a key, unchecked
 string_impl::
 string_impl(
-    char** dest,
-    std::size_t len,
-    storage_ptr const& sp)
+    string_view s,
+    string_tag,
+    const storage_ptr& sp)
 {
-    BOOST_ASSERT(len <= max_size());
+    BOOST_ASSERT(s.size() <= max_size());
+    char* str;
+    if(s.size() <= sbo_chars_)
+    {
+        s_.k = short_string_;
+        s_.buf[sbo_chars_] =
+            static_cast<char>(
+                sbo_chars_ - s.size());
+        str = s_.buf;
+    }
+    else
+    {
+        s_.k = kind::string;
+        p_.t = ::new(sp->allocate(
+            sizeof(table) +
+                s.size() + 1,
+            alignof(table))) table{
+                static_cast<
+                    std::uint32_t>(s.size()),
+                static_cast<
+                    std::uint32_t>(s.size())};
+        str = reinterpret_cast<char*>(p_.t + 1);
+    }
+    std::memcpy(str, s.data(), s.size());
+    str[s.size()] = 0;
+}
+
+string_impl::
+string_impl(
+    string_view s,
+    key_tag,
+    const storage_ptr& sp)
+{
+    BOOST_ASSERT(s.size() <= max_size());
     k_.k = key_string_;
     k_.n = static_cast<
-        std::uint32_t>(len);
+        std::uint32_t>(s.size());
     k_.s = reinterpret_cast<
-        char*>(sp->allocate(len + 1));
-    k_.s[len] = 0; // null term
-    *dest = k_.s;
+        char*>(sp->allocate(s.size() + 1));
+    std::memcpy(k_.s, s.data(), s.size());
+    k_.s[s.size()] = 0; // null term
+}
+
+string_impl::
+string_impl(
+    string_view s1,
+    string_view s2,
+    string_tag,
+    const storage_ptr& sp)
+{
+    const std::size_t total = 
+        s1.size() + s2.size();
+    BOOST_ASSERT(total <= max_size());
+    char* str;
+    if(total <= sbo_chars_)
+    {
+        s_.k = short_string_;
+        s_.buf[sbo_chars_] =
+            static_cast<char>(
+                sbo_chars_ - total);
+        str = s_.buf;
+    }
+    else
+    {
+        s_.k = kind::string;
+        p_.t = ::new(sp->allocate(
+            sizeof(table) +
+                total + 1,
+            alignof(table))) table{
+                static_cast<
+                    std::uint32_t>(total),
+                static_cast<
+                    std::uint32_t>(total)};
+        str = reinterpret_cast<char*>(p_.t + 1);
+    }
+    std::memcpy(str, s1.data(), s1.size());
+    std::memcpy(str + s1.size(), 
+        s2.data(), s2.size());
+    str[total] = 0;
+}
+
+string_impl::
+string_impl(
+    string_view s1,
+    string_view s2,
+    key_tag,
+    const storage_ptr& sp)
+{
+    const std::size_t total = 
+        s1.size() + s2.size();
+    BOOST_ASSERT(total <= max_size());
+    k_.k = key_string_;
+    k_.n = static_cast<
+        std::uint32_t>(total);
+    k_.s = reinterpret_cast<
+        char*>(sp->allocate(total + 1));
+    std::memcpy(k_.s, s1.data(), s1.size());
+    std::memcpy(k_.s + s1.size(), 
+        s2.data(), s2.size());
+    k_.s[total] = 0; // null term
 }
 
 std::uint32_t
