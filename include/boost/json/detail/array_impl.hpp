@@ -21,6 +21,48 @@ class value;
 
 namespace detail {
 
+class unchecked_array
+{
+    value* data_;
+    std::size_t size_;
+    storage_ptr const& sp_;
+
+public:
+    inline
+    ~unchecked_array();
+
+    unchecked_array(
+        value* data,
+        std::size_t size,
+        storage_ptr const& sp) noexcept
+        : data_(data)
+        , size_(size)
+        , sp_(sp)
+    {
+    }
+
+    unchecked_array(
+        const unchecked_array&) = delete;
+
+    storage_ptr const&
+    storage() const noexcept
+    {
+        return sp_;
+    }
+
+    std::size_t
+    size() const noexcept
+    {
+        return size_;
+    }
+
+    inline
+    void
+    relocate(value* dest) noexcept;
+};
+
+//----------------------------------------------------------
+
 class array_impl
 {
     struct table
@@ -44,6 +86,11 @@ public:
     inline
     array_impl(
         std::size_t capacity,
+        storage_ptr const& sp);
+
+    inline
+    array_impl(
+        unchecked_array&& ua,
         storage_ptr const& sp);
 
     inline
@@ -111,48 +158,6 @@ public:
     BOOST_JSON_DECL
     void
     destroy(storage_ptr const& sp) noexcept;
-};
-
-//----------------------------------------------------------
-
-class unchecked_array
-{
-    value* data_;
-    std::size_t size_;
-    storage_ptr const& sp_;
-
-public:
-    inline
-    ~unchecked_array();
-
-    unchecked_array(
-        value* data,
-        std::size_t size,
-        storage_ptr const& sp) noexcept
-        : data_(data)
-        , size_(size)
-        , sp_(sp)
-    {
-    }
-
-    unchecked_array(
-        const unchecked_array&) = delete;
-
-    storage_ptr const&
-    storage() const noexcept
-    {
-        return sp_;
-    }
-
-    std::size_t
-    size() const noexcept
-    {
-        return size_;
-    }
-
-    inline
-    void
-    relocate(value* dest) noexcept;
 };
 
 } // detail

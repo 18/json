@@ -30,7 +30,7 @@ unchecked_array::
     if(! data_ ||
         sp_.is_not_counted_and_deallocate_is_trivial())
         return;
-    for(unsigned long i = 0;
+    for(std::size_t i = 0;
         i < size_; ++i)
         data_[i].~value();
 }
