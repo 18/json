@@ -305,6 +305,8 @@ push_key(
     string_view s,
     std::size_t n)
 {
+    // fast path when s
+    // contains the full key
     if(BOOST_JSON_LIKELY(
         s.size() == n))
     {
@@ -329,6 +331,8 @@ push_string(
     string_view s,
     std::size_t n)
 {
+    // fast path when s
+    // contains the full string
     if(BOOST_JSON_LIKELY(
         s.size() == n))
     {
