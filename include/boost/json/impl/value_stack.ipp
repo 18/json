@@ -17,15 +17,6 @@
 
 BOOST_JSON_NS_BEGIN
 
-std::size_t
-value_stack::
-size() const noexcept
-{
-    return top_ - base_;
-}
-
-//--------------------------------------
-
 // destroy the values but
 // not the stack allocation.
 void
@@ -44,78 +35,66 @@ clear() noexcept
 // make room for at least one more value
 void
 value_stack::
-grow_one()
+grow()
 {
-    //BOOST_ASSERT(chars_ == 0);
-    std::size_t const capacity =
-        end_ - base_;
-    std::size_t new_cap = min_size;
-    // VFALCO check overflow here
-    while(new_cap < capacity + 1)
-        new_cap <<= 1;
-    auto const begin =
-        reinterpret_cast<value*>(
-            stack_sp_->allocate(
-                new_cap * sizeof(value)));
-    if(base_)
+    const std::size_t capacity =
+        reinterpret_cast<const char*>(end_) -
+        reinterpret_cast<const char*>(base_);
+    const std::size_t size =
+        reinterpret_cast<const char*>(top_) -
+        reinterpret_cast<const char*>(base_);
+    const std::size_t new_cap = base_ ? 
+        capacity * 2 : min_size;
+    value* const new_base = static_cast<value*>(
+        stack_sp_->allocate(new_cap));
+    if(BOOST_JSON_LIKELY(base_))
     {
-        std::memcpy(
-            reinterpret_cast<char*>(begin),
-            reinterpret_cast<char*>(base_),
-            size() * sizeof(value));
-        if(base_ != temp_)
-            stack_sp_->deallocate(base_,
-                capacity * sizeof(value));
+        std::memcpy(reinterpret_cast<char*>(new_base),
+            reinterpret_cast<char*>(base_), size);
+        stack_sp_->deallocate(base_, capacity);
     }
     // book-keeping
-    top_ = begin + (top_ - base_);
-    end_ = begin + new_cap;
-    base_ = begin;
+    top_ = reinterpret_cast<value*>(
+        reinterpret_cast<char*>(new_base) + size);
+    end_ = reinterpret_cast<value*>(
+        reinterpret_cast<char*>(new_base) + new_cap);
+    base_ = new_base;
 }
 
-// make room for nchars additional characters.
+// make room for n additional characters.
 void
 value_stack::
 grow(
-    std::size_t nchars,
+    std::size_t n,
     std::size_t total)
 {
-    // needed capacity in values
-    std::size_t const needed =
-        size() +
-        1 +
-        ((total +
-            sizeof(value) - 1) /
-                sizeof(value));
-    std::size_t const capacity =
-        end_ - base_;
-    BOOST_ASSERT(
-        needed > capacity);
-    std::size_t new_cap = min_size;
+    const std::size_t capacity =
+        reinterpret_cast<const char*>(end_) -
+        reinterpret_cast<const char*>(base_);
+    const std::size_t size =
+        reinterpret_cast<const char*>(top_) -
+        reinterpret_cast<const char*>(base_);
+    const std::size_t needed = 
+        size + total + sizeof(value);
+    std::size_t new_cap = base_ ? 
+        capacity : min_size;
     // VFALCO check overflow here
     while(new_cap < needed)
-        new_cap <<= 1;
-    auto const begin =
-        reinterpret_cast<value*>(
-            stack_sp_->allocate(
-                new_cap * sizeof(value)));
-    if(base_)
+        new_cap *= 2;
+    value* const new_base = static_cast<value*>(
+        stack_sp_->allocate(new_cap));
+    if(BOOST_JSON_LIKELY(base_))
     {
-        std::size_t amount =
-            size() * sizeof(value);
-        amount += sizeof(value) + nchars;
-        std::memcpy(
-            reinterpret_cast<char*>(begin),
-            reinterpret_cast<char*>(base_),
-            amount);
-        if(base_ != temp_)
-            stack_sp_->deallocate(base_,
-                capacity * sizeof(value));
+        std::memcpy(reinterpret_cast<char*>(new_base),
+            reinterpret_cast<char*>(base_), needed - n);
+        stack_sp_->deallocate(base_, capacity);
     }
     // book-keeping
-    top_ = begin + (top_ - base_);
-    end_ = begin + new_cap;
-    base_ = begin;
+    top_ = reinterpret_cast<value*>(
+        reinterpret_cast<char*>(new_base) + size);
+    end_ = reinterpret_cast<value*>(
+        reinterpret_cast<char*>(new_base) + new_cap);
+    base_ = new_base;
 }
 
 //--------------------------------------
@@ -141,8 +120,9 @@ value&
 value_stack::
 push(Args&&... args)
 {
-    if(BOOST_JSON_UNLIKELY(top_ >= end_))
-        grow_one();
+    BOOST_ASSERT(top_ <= end_);
+    if(BOOST_JSON_UNLIKELY(top_ == end_))
+        grow();
     value& jv = detail::value_access::construct_value(
         top_, std::forward<Args>(args)..., value_sp_);
     ++top_;
@@ -163,13 +143,10 @@ exchange(Unchecked&& u)
     // construct value on the stack
     // to avoid clobbering top_[0],
     // which belongs to `u`.
-    detail::value_access::
-        construct_value(
-            &jv.v, std::move(u));
-    std::memcpy(
-        reinterpret_cast<
-            char*>(top_),
-        &jv.v, sizeof(value));
+    detail::value_access::construct_value(
+        &jv.v, std::move(u));
+    std::memcpy(reinterpret_cast<
+        char*>(top_), &jv.v, sizeof(value));
     ++top_;
 }
 
@@ -179,34 +156,16 @@ value_stack::
 ~value_stack()
 {
     clear();
-    if(base_ != temp_)
+    if(base_)
         stack_sp_->deallocate(base_,
-            (end_ - base_) * sizeof(value));
+            reinterpret_cast<const char*>(end_) - 
+            reinterpret_cast<const char*>(base_));
 }
 
 value_stack::
-value_stack(
-    storage_ptr sp,
-    void* temp_buffer,
-    std::size_t temp_size) noexcept
+value_stack(storage_ptr sp) noexcept
     : stack_sp_(std::move(sp))
-    , temp_(temp_buffer)
 {
-    if(temp_size >= min_size *
-        sizeof(value))
-    {
-        base_ = reinterpret_cast<
-            value*>(temp_buffer);
-        top_ = base_;
-        end_ = base_ +
-            temp_size / sizeof(value);
-    }
-    else
-    {
-        base_ = nullptr;
-        top_ = nullptr;
-        end_ = nullptr;
-    }
 }
 
 void
@@ -226,11 +185,9 @@ release() noexcept
     // This means the caller did not
     // cause a single top level element
     // to be produced.
-    BOOST_ASSERT(size() == 1);
-
+    BOOST_ASSERT(top_ - base_ == 1);
     // give up shared ownership
     value_sp_ = {};
-
     return pilfer(*--top_);
 }
 
@@ -240,13 +197,13 @@ void
 value_stack::
 push_array(std::size_t n)
 {
+    BOOST_ASSERT(top_ <= end_);
     // we already have room if n > 0
     // n is checked first because it's
     // already in a register
     if(BOOST_JSON_UNLIKELY(
-        n == 0 && top_ >= end_))
-        grow_one();
-    BOOST_ASSERT(n <= size());
+        n == 0 && top_ == end_))
+        grow();
     detail::unchecked_array ua(
         top_ -= n, n, value_sp_);
     exchange(std::move(ua));
@@ -256,12 +213,13 @@ void
 value_stack::
 push_object(std::size_t n)
 {
+    BOOST_ASSERT(top_ <= end_);
     // we already have room if n > 0
     // n is checked first because it's
     // already in a register
     if(BOOST_JSON_UNLIKELY(
-        n == 0 && top_ >= end_))
-        grow_one();
+        n == 0 && top_ == end_))
+        grow();
     detail::unchecked_object uo(
         top_ -= n * 2, n, value_sp_);
     exchange(std::move(uo));

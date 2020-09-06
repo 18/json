@@ -120,18 +120,16 @@ class value_stack
     constexpr
     static
     std::size_t
-    min_size = 16; 
+    min_size = sizeof(value) * 16; 
 
     storage_ptr value_sp_;
     storage_ptr stack_sp_;
-    void* temp_;
-    value* base_;
-    value* top_;
-    value* end_;
+    value* base_ = nullptr;
+    value* top_ = nullptr;
+    value* end_ = nullptr;
 
     inline void clear() noexcept;
-    inline std::size_t size() const noexcept;
-    inline void grow_one();
+    inline void grow();
     inline void grow(std::size_t n, std::size_t total);
 
     inline string_view release_string(std::size_t n) noexcept;
@@ -162,21 +160,9 @@ public:
         to use for intermediate storage allocations. If
         this argument is omitted, the default memory
         resource is used.
-
-        @param temp_buffer A pointer to a caller-owned
-        buffer which will be used to store temporary
-        data used while building the value. If this
-        pointer is null, the builder will use the
-        storage pointer to allocate temporary data.
-
-        @param temp_size The number of valid bytes of
-        storage pointed to by `temp_buffer`.
     */
     BOOST_JSON_DECL
-    value_stack(
-        storage_ptr sp = {},
-        void* temp_buffer = nullptr,
-        std::size_t temp_size = 0) noexcept;
+    value_stack(storage_ptr sp = {}) noexcept;
 
     /** Prepare to build a new document.
 

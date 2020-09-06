@@ -31,8 +31,7 @@ public:
     // This example builds a json::value without any dynamic memory allocations:
 
     // Construct the value stack using a local buffer
-    char temp[4096];
-    value_stack st( storage_ptr(), temp, sizeof(temp) );
+    value_stack st;
 
     // Create a static resource with a local initial buffer
     char buf[4096];

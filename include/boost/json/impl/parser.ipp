@@ -214,14 +214,8 @@ on_comment(
 parser::
 parser(
     storage_ptr sp,
-    parse_options const& opt,
-    void* temp_buffer,
-    std::size_t temp_size) noexcept
-    : p_(
-        opt,
-        std::move(sp),
-        temp_buffer,
-        temp_size)
+    parse_options const& opt) noexcept
+    : p_(opt, std::move(sp))
 {
 }
 
