@@ -204,7 +204,7 @@ push_array(std::size_t n)
     // n is checked first because it's
     // already in a register
     if(BOOST_JSON_UNLIKELY(
-        n == 0 && top_ == end_))
+        ! n && top_ == end_))
         grow();
     detail::unchecked_array ua(
         top_ -= n, n, value_sp_);
@@ -220,7 +220,7 @@ push_object(std::size_t n)
     // n is checked first because it's
     // already in a register
     if(BOOST_JSON_UNLIKELY(
-        n == 0 && top_ == end_))
+        ! n && top_ == end_))
         grow();
     detail::unchecked_object uo(
         top_ -= n * 2, n, value_sp_);
