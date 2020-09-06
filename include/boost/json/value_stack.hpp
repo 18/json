@@ -120,7 +120,7 @@ class value_stack
     constexpr
     static
     std::size_t
-    min_size = sizeof(value) * 16; 
+    min_capacity = sizeof(value) * 16; 
 
     storage_ptr value_sp_;
     storage_ptr stack_sp_;

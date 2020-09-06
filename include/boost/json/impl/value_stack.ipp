@@ -44,7 +44,7 @@ grow()
         reinterpret_cast<const char*>(top_) -
         reinterpret_cast<const char*>(base_);
     const std::size_t new_cap = base_ ? 
-        capacity * 2 : min_size;
+        capacity * 2 : min_capacity;
     value* const new_base = static_cast<value*>(
         stack_sp_->allocate(new_cap));
     if(BOOST_JSON_LIKELY(base_))
@@ -76,7 +76,7 @@ grow(
     const std::size_t needed = 
         size + total + sizeof(value);
     std::size_t new_cap = base_ ? 
-        capacity : min_size;
+        capacity : min_capacity;
     // VFALCO check overflow here
     while(new_cap < needed)
         new_cap *= 2;
@@ -293,35 +293,35 @@ void
 value_stack::
 push_int64(int64_t i)
 {
-    push(i);
+    return push(i);
 }
 
 void
 value_stack::
 push_uint64(uint64_t u)
 {
-    push(u);
+    return push(u);
 }
 
 void
 value_stack::
 push_double(double d)
 {
-    push(d);
+    return push(d);
 }
 
 void
 value_stack::
 push_bool(bool b)
 {
-    push(b);
+    return push(b);
 }
 
 void
 value_stack::
 push_null()
 {
-    push(nullptr);
+    return push(nullptr);
 }
 
 BOOST_JSON_NS_END
