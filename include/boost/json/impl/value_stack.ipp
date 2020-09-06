@@ -17,76 +17,11 @@
 
 BOOST_JSON_NS_BEGIN
 
-//--------------------------------------
-
-value_stack::
-stack::
-~stack()
-{
-    clear();
-    if(begin_ != temp_)
-        sp_->deallocate(
-            begin_,
-            (end_ - begin_) *
-                sizeof(value));
-}
-
-value_stack::
-stack::
-stack(
-    storage_ptr sp,
-    void* temp,
-    std::size_t size) noexcept
-    : sp_(std::move(sp))
-    , temp_(temp)
-{
-    if(size >= min_size_ *
-        sizeof(value))
-    {
-        begin_ = reinterpret_cast<
-            value*>(temp);
-        top_ = begin_;
-        end_ = begin_ +
-            size / sizeof(value);
-    }
-    else
-    {
-        begin_ = nullptr;
-        top_ = nullptr;
-        end_ = nullptr;
-    }
-}
-
-void
-value_stack::
-stack::
-run_dtors(bool b) noexcept
-{
-    run_dtors_ = b;
-}
-
 std::size_t
 value_stack::
-stack::
 size() const noexcept
 {
-    return top_ - begin_;
-}
-
-bool
-value_stack::
-stack::
-has_chars()
-{
-    return chars_ != 0;
-}
-
-std::size_t
-value_stack::
-stack::
-chars() const noexcept
-{
-    return chars_;
+    return top_ - base_;
 }
 
 //--------------------------------------
@@ -95,65 +30,52 @@ chars() const noexcept
 // not the stack allocation.
 void
 value_stack::
-stack::
 clear() noexcept
 {
-    if(top_ != begin_)
+    if(top_ != base_)
     {
-        if(run_dtors_)
-            for(auto it = top_;
-                it-- != begin_;)
+        if(! value_sp_.is_not_counted_and_deallocate_is_trivial())
+            for(auto it = top_; it-- != base_;)
                 it->~value();
-        top_ = begin_;
+        top_ = base_;
     }
-}
-
-void
-value_stack::
-stack::
-maybe_grow()
-{
-    if(top_ >= end_)
-        grow_one();
 }
 
 // make room for at least one more value
 void
 value_stack::
-stack::
 grow_one()
 {
     //BOOST_ASSERT(chars_ == 0);
     std::size_t const capacity =
-        end_ - begin_;
-    std::size_t new_cap = min_size_;
+        end_ - base_;
+    std::size_t new_cap = min_size;
     // VFALCO check overflow here
     while(new_cap < capacity + 1)
         new_cap <<= 1;
     auto const begin =
         reinterpret_cast<value*>(
-            sp_->allocate(
+            stack_sp_->allocate(
                 new_cap * sizeof(value)));
-    if(begin_)
+    if(base_)
     {
         std::memcpy(
             reinterpret_cast<char*>(begin),
-            reinterpret_cast<char*>(begin_),
+            reinterpret_cast<char*>(base_),
             size() * sizeof(value));
-        if(begin_ != temp_)
-            sp_->deallocate(begin_,
+        if(base_ != temp_)
+            stack_sp_->deallocate(base_,
                 capacity * sizeof(value));
     }
     // book-keeping
-    top_ = begin + (top_ - begin_);
+    top_ = begin + (top_ - base_);
     end_ = begin + new_cap;
-    begin_ = begin;
+    base_ = begin;
 }
 
 // make room for nchars additional characters.
 void
 value_stack::
-stack::
 grow(
     std::size_t nchars,
     std::size_t total)
@@ -166,42 +88,188 @@ grow(
             sizeof(value) - 1) /
                 sizeof(value));
     std::size_t const capacity =
-        end_ - begin_;
+        end_ - base_;
     BOOST_ASSERT(
         needed > capacity);
-    std::size_t new_cap = min_size_;
+    std::size_t new_cap = min_size;
     // VFALCO check overflow here
     while(new_cap < needed)
         new_cap <<= 1;
     auto const begin =
         reinterpret_cast<value*>(
-            sp_->allocate(
+            stack_sp_->allocate(
                 new_cap * sizeof(value)));
-    if(begin_)
+    if(base_)
     {
         std::size_t amount =
             size() * sizeof(value);
         amount += sizeof(value) + nchars;
         std::memcpy(
             reinterpret_cast<char*>(begin),
-            reinterpret_cast<char*>(begin_),
+            reinterpret_cast<char*>(base_),
             amount);
-        if(begin_ != temp_)
-            sp_->deallocate(begin_,
+        if(base_ != temp_)
+            stack_sp_->deallocate(base_,
                 capacity * sizeof(value));
     }
     // book-keeping
-    top_ = begin + (top_ - begin_);
+    top_ = begin + (top_ - base_);
     end_ = begin + new_cap;
-    begin_ = begin;
+    base_ = begin;
 }
 
 //--------------------------------------
 
+string_view
+value_stack::
+release_string(
+    std::size_t n) noexcept
+{
+    // ensure a pushed value cannot
+    // clobber the released string.
+    BOOST_ASSERT(
+        reinterpret_cast<char*>(
+            top_ + 1) + n <=
+        reinterpret_cast<char*>(
+            end_));
+    return { reinterpret_cast<
+        char const*>(top_ + 1), n };
+}
+
+template<class... Args>
+value&
+value_stack::
+push(Args&&... args)
+{
+    if(BOOST_JSON_UNLIKELY(top_ >= end_))
+        grow_one();
+    value& jv = detail::value_access::construct_value(
+        top_, std::forward<Args>(args)..., value_sp_);
+    ++top_;
+    return jv;
+}
+
+template<class Unchecked>
 void
 value_stack::
-stack::
-append(
+exchange(Unchecked&& u)
+{
+    union U
+    {
+        value v;
+        U() {}
+        ~U() {}
+    } jv;
+    // construct value on the stack
+    // to avoid clobbering top_[0],
+    // which belongs to `u`.
+    detail::value_access::
+        construct_value(
+            &jv.v, std::move(u));
+    std::memcpy(
+        reinterpret_cast<
+            char*>(top_),
+        &jv.v, sizeof(value));
+    ++top_;
+}
+
+//----------------------------------------------------------
+
+value_stack::
+~value_stack()
+{
+    clear();
+    if(base_ != temp_)
+        stack_sp_->deallocate(base_,
+            (end_ - base_) * sizeof(value));
+}
+
+value_stack::
+value_stack(
+    storage_ptr sp,
+    void* temp_buffer,
+    std::size_t temp_size) noexcept
+    : stack_sp_(std::move(sp))
+    , temp_(temp_buffer)
+{
+    if(temp_size >= min_size *
+        sizeof(value))
+    {
+        base_ = reinterpret_cast<
+            value*>(temp_buffer);
+        top_ = base_;
+        end_ = base_ +
+            temp_size / sizeof(value);
+    }
+    else
+    {
+        base_ = nullptr;
+        top_ = nullptr;
+        end_ = nullptr;
+    }
+}
+
+void
+value_stack::
+reset(storage_ptr sp) noexcept
+{
+    clear();
+    value_sp_.~storage_ptr();
+    ::new(&value_sp_) storage_ptr(
+        pilfer(sp));
+}
+
+value
+value_stack::
+release() noexcept
+{
+    // This means the caller did not
+    // cause a single top level element
+    // to be produced.
+    BOOST_ASSERT(size() == 1);
+
+    // give up shared ownership
+    value_sp_ = {};
+
+    return pilfer(*--top_);
+}
+
+//----------------------------------------------------------
+
+void
+value_stack::
+push_array(std::size_t n)
+{
+    // we already have room if n > 0
+    // n is checked first because it's
+    // already in a register
+    if(BOOST_JSON_UNLIKELY(
+        n == 0 && top_ >= end_))
+        grow_one();
+    BOOST_ASSERT(n <= size());
+    detail::unchecked_array ua(
+        top_ -= n, n, value_sp_);
+    exchange(std::move(ua));
+}
+
+void
+value_stack::
+push_object(std::size_t n)
+{
+    // we already have room if n > 0
+    // n is checked first because it's
+    // already in a register
+    if(BOOST_JSON_UNLIKELY(
+        n == 0 && top_ >= end_))
+        grow_one();
+    detail::unchecked_object uo(
+        top_ -= n * 2, n, value_sp_);
+    exchange(std::move(uo));
+}
+
+void
+value_stack::
+push_chars(
     string_view s,
     std::size_t n)
 {
@@ -231,163 +299,6 @@ append(
             end_));
 }
 
-string_view
-value_stack::
-stack::
-release_string(
-    std::size_t n) noexcept
-{
-    // ensure a pushed value cannot
-    // clobber the released string.
-    BOOST_ASSERT(
-        reinterpret_cast<char*>(
-            top_ + 1) + n <=
-        reinterpret_cast<char*>(
-            end_));
-    return { reinterpret_cast<
-        char const*>(top_ + 1), n };
-}
-
-// transfer ownership of the top n
-// elements of the stack to the caller
-value*
-value_stack::
-stack::
-release(std::size_t n) noexcept
-{
-    BOOST_ASSERT(n <= size());
-    top_ -= n;
-    return top_;
-}
-
-template<class... Args>
-value&
-value_stack::
-stack::
-push(Args&&... args)
-{
-    if(top_ >= end_)
-        grow_one();
-    value& jv = detail::value_access::
-        construct_value(top_,
-            std::forward<Args>(args)...);
-    ++top_;
-    return jv;
-}
-
-template<class Unchecked>
-void
-value_stack::
-stack::
-exchange(Unchecked&& u)
-{
-    union U
-    {
-        value v;
-        U() {}
-        ~U() {}
-    } jv;
-    // construct value on the stack
-    // to avoid clobbering top_[0],
-    // which belongs to `u`.
-    detail::value_access::
-        construct_value(
-            &jv.v, std::move(u));
-    std::memcpy(
-        reinterpret_cast<
-            char*>(top_),
-        &jv.v, sizeof(value));
-    ++top_;
-}
-
-//----------------------------------------------------------
-
-value_stack::
-~value_stack()
-{
-    // default dtor is here so the
-    // definition goes in the library
-    // instead of the caller's TU.
-}
-
-value_stack::
-value_stack(
-    storage_ptr sp,
-    void* temp_buffer,
-    std::size_t temp_size) noexcept
-    : st_(
-        std::move(sp),
-        temp_buffer,
-        temp_size)
-{
-}
-
-void
-value_stack::
-reset(storage_ptr sp) noexcept
-{
-    st_.clear();
-
-    sp_.~storage_ptr();
-    ::new(&sp_) storage_ptr(
-        pilfer(sp));
-
-    // `stack` needs this
-    // to clean up correctly
-    st_.run_dtors(
-        ! sp_.is_not_counted_and_deallocate_is_trivial());
-}
-
-value
-value_stack::
-release() noexcept
-{
-    // This means the caller did not
-    // cause a single top level element
-    // to be produced.
-    BOOST_ASSERT(st_.size() == 1);
-
-    // give up shared ownership
-    sp_ = {};
-
-    return pilfer(*st_.release(1));
-}
-
-//----------------------------------------------------------
-
-void
-value_stack::
-push_array(std::size_t n)
-{
-    // we already have room if n > 0
-    if(BOOST_JSON_UNLIKELY(n == 0))
-        st_.maybe_grow();
-    detail::unchecked_array ua(
-        st_.release(n), n, sp_);
-    st_.exchange(std::move(ua));
-}
-
-void
-value_stack::
-push_object(std::size_t n)
-{
-    // we already have room if n > 0
-    if(BOOST_JSON_UNLIKELY(n == 0))
-        st_.maybe_grow();
-    detail::unchecked_object uo(
-        st_.release(n * 2), n, sp_);
-    st_.exchange(std::move(uo));
-}
-
-void
-value_stack::
-push_chars(
-    string_view s,
-    std::size_t n)
-{
-    st_.append(s, n);
-}
-
 void
 value_stack::
 push_key(
@@ -398,19 +309,16 @@ push_key(
         s.size() == n))
     {
         char* dest = nullptr;
-        st_.push(&dest, n, sp_);
-        std::memcpy(
-            dest, s.data(), n);
+        push(&dest, n);
+        std::memcpy(dest, s.data(), n);
         return;
     }
     BOOST_ASSERT(n > s.size());
-    auto part = st_.release_string(
-        n - s.size());
+    string_view part = 
+        release_string(n - s.size());
     char* dest = nullptr;
-    st_.push(&dest,
-        part.size() + s.size(), sp_);
-    std::memcpy(dest,
-        part.data(), part.size());
+    push(&dest, part.size() + s.size());
+    std::memcpy(dest, part.data(), part.size());
     std::memcpy(dest + part.size(),
         s.data(), s.size());
 }
@@ -424,7 +332,7 @@ push_string(
     if(BOOST_JSON_LIKELY(
         s.size() == n))
     {
-        st_.push(s, sp_);
+        push(s);
         return;
     }
     // VFALCO We could add a special
@@ -432,58 +340,51 @@ push_string(
     // creates uninitialized space,
     // to reduce member function calls.
     BOOST_ASSERT(n > s.size());
-    auto part = st_.release_string(
-        n - s.size());
-    auto& str = st_.push(
-        string_kind, sp_).get_string();
-    str.reserve(
-        part.size() + s.size());
-    std::memcpy(
-        str.data(),
+    string_view part = 
+        release_string(n - s.size());
+    string& str = 
+        push(string_kind).get_string();
+    str.reserve(part.size() + s.size());
+    std::memcpy(str.data(),
         part.data(), part.size());
-    std::memcpy(
-        str.data() + part.size(),
+    std::memcpy(str.data() + part.size(),
         s.data(), s.size());
     str.grow(part.size() + s.size());
 }
 
 void
 value_stack::
-push_int64(
-    int64_t i)
+push_int64(int64_t i)
 {
-    st_.push(i, sp_);
+    push(i);
 }
 
 void
 value_stack::
-push_uint64(
-    uint64_t u)
+push_uint64(uint64_t u)
 {
-    st_.push(u, sp_);
+    push(u);
 }
 
 void
 value_stack::
-push_double(
-    double d)
+push_double(double d)
 {
-    st_.push(d, sp_);
+    push(d);
 }
 
 void
 value_stack::
-push_bool(
-    bool b)
+push_bool(bool b)
 {
-    st_.push(b, sp_);
+    push(b);
 }
 
 void
 value_stack::
 push_null()
 {
-    st_.push(nullptr, sp_);
+    push(nullptr);
 }
 
 BOOST_JSON_NS_END

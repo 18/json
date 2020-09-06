@@ -117,46 +117,27 @@ BOOST_JSON_NS_BEGIN
 */
 class value_stack
 {
-    class stack
-    {
-        enum
-        {
-            min_size_ = 16
-        };
+    constexpr
+    static
+    std::size_t
+    min_size = 16; 
 
-        storage_ptr sp_;
-        void* temp_;
-        value* begin_;
-        value* top_;
-        value* end_;
-        // string starts at top_+1
-        std::size_t chars_ = 0;
-        bool run_dtors_ = false;
+    storage_ptr value_sp_;
+    storage_ptr stack_sp_;
+    void* temp_;
+    value* base_;
+    value* top_;
+    value* end_;
 
-    public:
-        inline ~stack();
-        inline stack(
-            storage_ptr sp,
-            void* temp, std::size_t size) noexcept;
-        inline void run_dtors(bool b) noexcept;
-        inline std::size_t size() const noexcept;
-        inline bool has_chars();
-        inline std::size_t chars() const noexcept;
+    inline void clear() noexcept;
+    inline std::size_t size() const noexcept;
+    inline void grow_one();
+    inline void grow(std::size_t n, std::size_t total);
 
-        inline void clear() noexcept;
-        inline void maybe_grow();
-        inline void grow_one();
-        inline void grow(std::size_t n, std::size_t total);
+    inline string_view release_string(std::size_t n) noexcept;
+    template<class... Args> value& push(Args&&... args);
+    template<class Unchecked> void exchange(Unchecked&& u);
 
-        inline void append(string_view s, std::size_t n);
-        inline string_view release_string(std::size_t n) noexcept;
-        inline value* release(std::size_t n) noexcept;
-        template<class... Args> value& push(Args&&... args);
-        template<class Unchecked> void exchange(Unchecked&& u);
-    };
-
-    stack st_;
-    storage_ptr sp_;
 
 public:
     /** Destructor.
@@ -425,8 +406,7 @@ public:
     */
     BOOST_JSON_DECL
     void
-    push_int64(
-        int64_t i);
+    push_int64(int64_t i);
 
     /** Push a number onto the stack
 
@@ -441,8 +421,7 @@ public:
     */
     BOOST_JSON_DECL
     void
-    push_uint64(
-        uint64_t u);
+    push_uint64(uint64_t u);
 
     /** Push a number onto the stack
 
@@ -457,8 +436,7 @@ public:
     */
     BOOST_JSON_DECL
     void
-    push_double(
-        double d);
+    push_double(double d);
 
     /** Push a `bool` onto the stack
 
@@ -473,8 +451,7 @@ public:
     */
     BOOST_JSON_DECL
     void
-    push_bool(
-        bool b);
+    push_bool(bool b);
 
     /** Push a null onto the stack
 
