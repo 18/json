@@ -167,6 +167,7 @@ struct null_k
 struct value_access
 {
     template<class Value, class... Args>
+    BOOST_FORCEINLINE
     static
     Value&
     construct_value(Value* p, Args&&... args)
@@ -177,6 +178,7 @@ struct value_access
     }
 
     template<class KeyValuePair, class... Args>
+    BOOST_FORCEINLINE
     static
     KeyValuePair&
     construct_key_value_pair(
@@ -189,6 +191,7 @@ struct value_access
     }
 
     template<class Value>
+    BOOST_FORCEINLINE
     static
     char const*
     release_key(
