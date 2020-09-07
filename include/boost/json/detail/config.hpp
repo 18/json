@@ -53,6 +53,14 @@
 # endif
 #endif
 
+#ifndef BOOST_JSON_NO_DESTROY	
+# if defined(__clang__) && defined(__has_cpp_attribute)		
+#  if __has_cpp_attribute(clang::no_destroy)		
+#   define BOOST_JSON_NO_DESTROY [[clang::no_destroy]]		
+#  endif
+# endif
+#endif
+
 // BOOST_NORETURN ---------------------------------------------//
 // Macro to use before a function declaration/definition to designate
 // the function as not returning normally (i.e. with a return statement

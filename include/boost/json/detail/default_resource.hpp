@@ -25,6 +25,10 @@ class
     : public memory_resource
 {
 public:
+    static
+    std::uintptr_t
+    singleton() noexcept;
+    
     ~default_resource();
 
     void*
