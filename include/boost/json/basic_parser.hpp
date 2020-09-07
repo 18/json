@@ -967,10 +967,20 @@ parse_unescaped(const char* p)
     cs = detail::count_valid<AllowBadUTF8>(
         cs.begin(), cs.end());
     std::size_t size = cs.used(start);
-    if(BOOST_JSON_UNLIKELY(size > 
-        BOOST_JSON_MAX_STRING_SIZE - total))
-        return fail(cs.begin(), IsKey ? 
-            error::key_too_large : error::string_too_large);
+    if(IsKey)
+    {
+        if(BOOST_JSON_UNLIKELY(size > 
+            Handler::max_key_size - total))
+            return fail(cs.begin(), 
+                error::key_too_large);
+    }
+    else
+    {
+        if(BOOST_JSON_UNLIKELY(size > 
+            Handler::max_string_size - total))
+            return fail(cs.begin(), 
+                error::string_too_large);
+    }
     total += size;
     if(BOOST_JSON_UNLIKELY(! cs))
     {
@@ -1051,6 +1061,8 @@ parse_escaped(
         &Handler::on_key_part : &Handler::on_string_part;
     constexpr auto ev_too_large = IsKey ? 
         error::key_too_large : error::string_too_large;
+    constexpr auto max_size = IsKey ? 
+        Handler::max_key_size : Handler::max_string_size;
     detail::clipped_const_stream cs(p, end_);
     detail::buffer<BOOST_JSON_PARSER_BUFFER_SIZE> temp;
     int32_t digit;
@@ -1091,8 +1103,8 @@ do_str3:
     {
         if(BOOST_JSON_LIKELY(! temp.empty()))
         {
-            if(BOOST_JSON_UNLIKELY(temp.size() > 
-                BOOST_JSON_MAX_STRING_SIZE - total))
+            if(BOOST_JSON_UNLIKELY(
+                temp.size() > max_size - total))
                 return fail(cs.begin(), ev_too_large);
             total += temp.size();
             if(BOOST_JSON_UNLIKELY(
@@ -1240,8 +1252,8 @@ do_str3:
         // flush
         if(BOOST_JSON_LIKELY(! temp.empty()))
         {
-            if(BOOST_JSON_UNLIKELY(temp.size() > 
-                BOOST_JSON_MAX_STRING_SIZE - total))
+            if(BOOST_JSON_UNLIKELY(
+                temp.size() > max_size - total))
                 return fail(cs.begin(), ev_too_large);
             total += temp.size();
             if(BOOST_JSON_UNLIKELY(
@@ -1369,8 +1381,8 @@ do_str2:
             // flush
             if(BOOST_JSON_LIKELY(! temp.empty()))
             {
-                if(BOOST_JSON_UNLIKELY(temp.size() > 
-                    BOOST_JSON_MAX_STRING_SIZE - total))
+                if(BOOST_JSON_UNLIKELY(
+                    temp.size() > max_size - total))
                     return fail(cs.begin(), ev_too_large);
                 total += temp.size();
                 if(BOOST_JSON_UNLIKELY(
@@ -1385,8 +1397,8 @@ do_str2:
         c = *cs;
         if(BOOST_JSON_LIKELY(c == '\x22')) // '"'
         {
-            if(BOOST_JSON_UNLIKELY(temp.size() > 
-                BOOST_JSON_MAX_STRING_SIZE - total))
+            if(BOOST_JSON_UNLIKELY(
+                temp.size() > max_size - total))
                 return fail(cs.begin(), ev_too_large);
             total += temp.size();
             if(BOOST_JSON_UNLIKELY(
@@ -1402,8 +1414,8 @@ do_str2:
             {
                 if(BOOST_JSON_LIKELY(! temp.empty()))
                 {
-                    if(BOOST_JSON_UNLIKELY(temp.size() > 
-                        BOOST_JSON_MAX_STRING_SIZE - total))
+                    if(BOOST_JSON_UNLIKELY(
+                        temp.size() > max_size - total))
                         return fail(cs.begin(), ev_too_large);
                     total += temp.size();
                     if(BOOST_JSON_UNLIKELY(
@@ -1514,7 +1526,7 @@ do_obj2:
         }
 loop:
         if(BOOST_JSON_UNLIKELY(++size > 
-            BOOST_JSON_MAX_STRUCTURED_SIZE))
+            Handler::max_object_size))
             return fail(cs.begin(), error::object_too_large);
 do_obj3:
         cs = parse_string<StackEmpty, true,
@@ -1660,7 +1672,7 @@ do_arr2:
         }
 loop:
         if(BOOST_JSON_UNLIKELY(++size > 
-            BOOST_JSON_MAX_STRUCTURED_SIZE))
+            Handler::max_array_size))
             return fail(cs.begin(), error::array_too_large);
 do_arr3:
         // array is not empty, value required

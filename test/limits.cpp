@@ -293,7 +293,7 @@ public:
     {
         // overflow in on_key_part
         {
-            null_parser p;
+            parser p;
             error_code ec;
             std::string big;
             big = "\\b";
@@ -307,7 +307,7 @@ public:
 
         // overflow in on_key
         {
-            null_parser p;
+            parser p;
             error_code ec;
             std::string big;
             big = "\\b";
@@ -321,7 +321,7 @@ public:
 
         // overflow in on_string_part
         {
-            null_parser p;
+            parser p;
             error_code ec;
             std::string big;
             big = "\\b";
@@ -335,7 +335,7 @@ public:
 
         // overflow in on_string
         {
-            null_parser p;
+            parser p;
             error_code ec;
             std::string big;
             big = "\\b";
@@ -350,7 +350,7 @@ public:
 
         // object overflow
         {
-            null_parser p;
+            parser p;
             error_code ec;
             string_view s = R"({
                 "00":0,"01":0,"02":0,"03":0,"04":0,"05":0,"06":0,"07":0,"08":0,"09":0,
@@ -364,7 +364,7 @@ public:
 
         // array overflow
         {
-            null_parser p;
+            parser p;
             error_code ec;
             string_view s = "["
                 "0,0,0,0,0,0,0,0,0,0,"
