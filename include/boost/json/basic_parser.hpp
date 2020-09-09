@@ -502,7 +502,8 @@ parse_document(const char* p)
         case state::doc1: goto do_doc1;
         case state::doc2: goto do_doc2;
         case state::doc3: goto do_doc3;
-        case state::doc4: goto do_doc4;
+        case state::doc4: 
+            BOOST_ASSERT(! "non-standard JSON parsing is disabled");
         }
     }
 do_doc1:
@@ -510,79 +511,17 @@ do_doc1:
     if(BOOST_JSON_UNLIKELY(! cs))
         return maybe_suspend(cs.begin(), state::doc1);
 do_doc2:
-    switch(+opt_.allow_comments |
-        (opt_.allow_trailing_commas << 1) |
-        (opt_.allow_invalid_utf8 << 2))
-    {
-    // no extensions
-    default:
-        cs = parse_value<StackEmpty, false, false, false>(cs.begin());
-        break;
-    // comments
-    case 1:
-        cs = parse_value<StackEmpty, true, false, false>(cs.begin());
-        break;
-    // trailing
-    case 2:
-        cs = parse_value<StackEmpty, false, true, false>(cs.begin());
-        break;
-    // comments & trailing
-    case 3:
-        cs = parse_value<StackEmpty, true, true, false>(cs.begin());
-        break;
-    // skip validation
-    case 4:
-        cs = parse_value<StackEmpty, false, false, true>(cs.begin());
-        break;
-    // comments & skip validation
-    case 5:
-        cs = parse_value<StackEmpty, true, false, true>(cs.begin());
-        break;
-    // trailing & skip validation
-    case 6:
-        cs = parse_value<StackEmpty, false, true, true>(cs.begin());
-        break;
-    // comments & trailing & skip validation
-    case 7:
-        cs = parse_value<StackEmpty, true, true, true>(cs.begin());
-        break;
-    }
+    if(opt_.allow_comments | 
+        opt_.allow_trailing_commas |
+        opt_.allow_invalid_utf8)
+        BOOST_ASSERT(! "non-standard JSON parsing is disabled");
+    cs = parse_value<StackEmpty, false, false, false>(cs.begin());
     if(BOOST_JSON_UNLIKELY(incomplete(cs)))
         return suspend_or_fail(state::doc2);
 do_doc3:
     cs = detail::count_whitespace(cs.begin(), cs.end());
-    if(BOOST_JSON_UNLIKELY(! cs))
-    {
-        if(more_)
-            return suspend(cs.begin(), state::doc3);
-    }
-    else if(opt_.allow_comments && *cs == '/')
-    {
-do_doc4:
-        switch(+opt_.allow_trailing_commas |
-            (opt_.allow_invalid_utf8 << 1))
-        {
-        // only comments
-        default:
-            cs = parse_comment<StackEmpty, false, true, false, false>(cs.begin());
-            break;
-        // trailing
-        case 1:
-            cs = parse_comment<StackEmpty, false, true, true, false>(cs.begin());
-            break;
-        // skip validation
-        case 2:
-            cs = parse_comment<StackEmpty, false, true, false, true>(cs.begin());
-            break;
-        // trailing & skip validation
-        case 3:
-            cs = parse_comment<StackEmpty, false, true, true, true>(cs.begin());
-            break;
-        }
-        if(BOOST_JSON_UNLIKELY(incomplete(cs)))
-            return suspend_or_fail(state::doc4);
-        goto do_doc3;
-    }
+    if(BOOST_JSON_UNLIKELY(! cs && more_))
+        return suspend(cs.begin(), state::doc3);
     return cs.begin();
 }
 

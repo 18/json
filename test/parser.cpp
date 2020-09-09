@@ -1117,8 +1117,8 @@ R"xx({
         testFreeFunctions();
         testSampleJson();
         testUnicodeStrings();
-        testTrailingCommas();
-        testComments();
+        //testTrailingCommas();
+        //testComments();
         testError();
         testDupeKeys();
         testIssue15();

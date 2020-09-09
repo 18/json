@@ -1273,7 +1273,7 @@ public:
         usingObjects();
         usingStrings();
         usingSerializing();
-        usingParsing();
+        //usingParsing();
         do_rpc("null");
         (void)parse_fast("null");
 
