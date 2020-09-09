@@ -15,56 +15,16 @@
 BOOST_JSON_NS_BEGIN
 namespace detail {
 
+#ifndef BOOST_JSON_NO_DESTROY
+no_destroy<default_resource>
+default_resource::instance_;
+#endif
+
 // this is here so that ~memory_resource
 // is emitted in the library instead of
 // the user's TU.
 default_resource::
 ~default_resource() = default;
-
-
-#ifdef BOOST_JSON_NO_DESTROY
-std::uintptr_t
-default_resource::
-singleton() noexcept
-{
-    BOOST_JSON_NO_DESTROY
-    static detail::default_resource resource_;
-    return reinterpret_cast<
-        std::uintptr_t>(&resource_);
-}
-#else
-union no_destroy
-{
-    constexpr
-    no_destroy() noexcept
-        : resource_() 
-    {
-    }
-
-    ~no_destroy() noexcept
-    {
-    }
-
-    detail::default_resource resource_;
-};
-
-template<class T>
-struct instance
-{
-    static no_destroy resource_;
-};
-
-template<class T>
-no_destroy instance<T>::resource_;
-
-std::uintptr_t
-default_resource::
-singleton() noexcept
-{
-    return reinterpret_cast<std::uintptr_t>(
-        &instance<void>::resource_.resource_);
-}
-#endif
 
 void*
 default_resource::

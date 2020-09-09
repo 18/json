@@ -16,6 +16,21 @@
 BOOST_JSON_NS_BEGIN
 namespace detail {
 
+// Prevents t from being destroyed
+template<typename T>
+union no_destroy
+{
+    constexpr no_destroy() : t()
+    {
+    }
+
+    ~no_destroy()
+    {
+    }
+
+    T t;
+};
+
 /** A simple memory resource that uses operator new and delete.
 */
 class
@@ -24,10 +39,30 @@ class
     default_resource final
     : public memory_resource
 {
+#ifndef BOOST_JSON_NO_DESTROY
+    BOOST_JSON_DECL
+    static no_destroy<default_resource> instance_;
+
 public:
     static
     std::uintptr_t
-    singleton() noexcept;
+    singleton() noexcept
+    {
+        return reinterpret_cast<
+            std::uintptr_t>(&instance_.t);
+    }
+#else
+public:
+    static
+    std::uintptr_t
+    singleton() noexcept
+    {
+        BOOST_JSON_NO_DESTROY
+        static default_resource resource_;
+        return reinterpret_cast<
+            std::uintptr_t>(&resource_);
+    }
+#endif
     
     ~default_resource();
 
