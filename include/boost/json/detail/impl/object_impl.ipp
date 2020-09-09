@@ -41,14 +41,8 @@ object_impl(
         throw_length_error(
             "capacity > max_size()",
             BOOST_CURRENT_LOCATION);
-    // make sure to update max_size
-    // if this is changed
-    const auto n = 
-        sizeof(table) + 
-        capacity *
-            (sizeof(value_type) +
-            sizeof(index_t));
-    tab_ = ::new(sp->allocate(n)) 
+    tab_ = ::new(sp->allocate(
+        allocation_size(capacity))) 
         table{0, capacity, prime_index, salt};
     // capacity == buckets()
     std::memset(bucket_begin(), 0xff, // null_index
@@ -68,12 +62,8 @@ object_impl(
         while(*prime < capacity)
             ++prime;
         capacity = *prime;
-        const std::size_t bytes = 
-            sizeof(table) + 
-            capacity *
-                (sizeof(value_type) + 
-                sizeof(index_t));
-        tab_ = ::new(sp->allocate(bytes)) 
+        tab_ = ::new(sp->allocate(
+            allocation_size(capacity))) 
             table{uo.size(), capacity, 
                 static_cast<std::size_t>(prime - bucket_sizes()), 
                 reinterpret_cast<std::uintptr_t>(this)};

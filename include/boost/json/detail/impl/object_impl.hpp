@@ -29,6 +29,18 @@ max_size() noexcept
         min::value : BOOST_JSON_MAX_STRUCTURED_SIZE;
 }
 
+constexpr
+std::size_t
+object_impl::
+allocation_size(
+    std::size_t capacity) noexcept
+{
+    // make sure to update max_size
+    // if this is changed
+    return sizeof(table) + capacity *
+        (sizeof(value_type) + sizeof(index_t));
+}
+
 void
 object_impl::
 remove(

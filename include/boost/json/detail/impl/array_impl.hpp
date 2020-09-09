@@ -25,6 +25,18 @@ max_size() noexcept
         min::value : BOOST_JSON_MAX_STRUCTURED_SIZE;
 }
 
+constexpr
+std::size_t
+array_impl::
+allocation_size(
+    std::size_t capacity) noexcept
+{
+    // make sure to update max_size
+    // if this is changed
+    return (sizeof(table) + capacity * sizeof(value) +
+        sizeof(table) + 1) / sizeof(table) * sizeof(table);
+}
+
 auto
 array_impl::
 index_of(value const* pos) const noexcept ->

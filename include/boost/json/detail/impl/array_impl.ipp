@@ -27,17 +27,8 @@ array_impl(
             BOOST_CURRENT_LOCATION);
     if(capacity > 0)
     {
-        // make sure to update max_size
-        // if this is changed
         tab_ = ::new(sp->allocate(
-            (sizeof(table) +
-             capacity * sizeof(value) +
-             sizeof(table) + 1)
-                / sizeof(table)
-                * sizeof(table),
-            (std::max)(
-                alignof(table),
-                alignof(value)))) table;
+            allocation_size(capacity))) table;
         tab_->capacity = static_cast<
             std::uint32_t>(capacity);
         tab_->size = 0;
@@ -53,14 +44,7 @@ array_impl(
     if(BOOST_JSON_LIKELY(n > 0))
     {
         tab_ = ::new(sp->allocate(
-            (sizeof(table) +
-             n * sizeof(value) +
-             sizeof(table) + 1)
-                / sizeof(table)
-                * sizeof(table),
-            (std::max)(
-                alignof(table),
-                alignof(value)))) table{
+            allocation_size(n))) table{
             static_cast<std::uint32_t>(n),
             static_cast<std::uint32_t>(n)};
         ua.relocate(reinterpret_cast<
@@ -104,14 +88,7 @@ destroy_impl(
     while(it != data())
         (*--it).~value();
     sp->deallocate(tab_,
-        (sizeof(table) +
-            capacity() * sizeof(value) +
-            sizeof(table) + 1)
-            / sizeof(table)
-            * sizeof(table),
-        (std::max)(
-            alignof(table),
-            alignof(value)));
+        allocation_size(capacity()));
 }
 
 void

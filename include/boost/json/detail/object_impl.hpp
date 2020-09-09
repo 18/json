@@ -120,6 +120,12 @@ public:
     std::size_t
     max_size() noexcept;
 
+    static
+    constexpr
+    std::size_t
+    allocation_size(
+        std::size_t capacity) noexcept;
+
     std::size_t
     size() const noexcept
     {
