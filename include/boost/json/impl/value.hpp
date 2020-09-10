@@ -51,14 +51,18 @@ struct value::undo
 //----------------------------------------------------------
 
 value::
-value(detail::unchecked_object&& uo)
-    : obj_(std::move(uo))
+value(
+    object_impl::table* tab,
+    const storage_ptr& sp) noexcept
+    : obj_(tab, sp)
 {
 }
 
 value::
-value(detail::unchecked_array&& ua)
-    : arr_(std::move(ua))
+value(
+    array_impl::table* tab,
+    const storage_ptr& sp) noexcept
+    : arr_(tab, sp)
 {
 }
 

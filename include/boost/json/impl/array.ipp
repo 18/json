@@ -78,9 +78,11 @@ undo_insert::
 //----------------------------------------------------------
 
 array::
-array(detail::unchecked_array&& ua)
-    : sp_(ua.storage())
-    , impl_(std::move(ua), sp_)
+array(
+    array_impl::table* tab,
+    const storage_ptr& sp) noexcept
+    : sp_(sp)
+    , impl_(tab)
 {
 }
 

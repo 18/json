@@ -125,7 +125,7 @@ public:
         key_tag,
         storage_ptr const& sp);
 
-     BOOST_JSON_DECL
+    BOOST_JSON_DECL
     string_impl(
         string_view s1,
         string_view s2,
@@ -220,17 +220,14 @@ public:
         std::size_t new_size,
         std::size_t capacity);
 
-    char const*
-    release_key(
-        std::size_t& n) noexcept
+    string_view
+    release_key() noexcept
     {
         BOOST_ASSERT(
             k_.k == key_string_);
-        n = k_.n;
-        auto const s = k_.s;
         // prevent deallocate
         k_.k = short_string_;
-        return s;
+        return {k_.s, k_.n};
     }
 
     void

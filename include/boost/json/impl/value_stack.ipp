@@ -126,7 +126,7 @@ push(Args&&... args)
     BOOST_ASSERT(top_ <= end_);
     if(BOOST_JSON_UNLIKELY(top_ == end_))
         grow();
-    detail::value_access::construct_value(
+    access::construct_value(
         top_, std::forward<Args>(args)..., value_sp_);
     ++top_;
 }
@@ -145,7 +145,7 @@ exchange(Unchecked&& u)
     // construct value on the stack
     // to avoid clobbering top_[0],
     // which belongs to `u`.
-    detail::value_access::construct_value(
+    access::construct_value(
         &jv.v, std::move(u));
     std::memcpy(reinterpret_cast<
         char*>(top_), &jv.v, sizeof(value));
@@ -200,15 +200,27 @@ value_stack::
 push_array(std::size_t n)
 {
     BOOST_ASSERT(top_ <= end_);
-    // we already have room if n > 0
-    // n is checked first because it's
-    // already in a register
-    if(BOOST_JSON_UNLIKELY(
-        ! n && top_ == end_))
-        grow();
-    detail::unchecked_array ua(
-        top_ -= n, n, value_sp_);
-    exchange(std::move(ua));
+    using impl = detail::array_impl;
+    impl::table* tab;
+    if(BOOST_JSON_UNLIKELY(n == 0))
+    {
+        if(BOOST_JSON_UNLIKELY(top_ == end_))
+            grow();
+        tab = nullptr;
+    }
+    else
+    {
+        // allocate up-front so we don't have to
+        // deal with memory leaks. if this throws,
+        // value_stack will clean up for us.
+        tab = ::new(value_sp_->allocate(
+            impl::allocation_size(n))) impl::table{
+                std::uint32_t(n), std::uint32_t(n)};
+        std::memcpy(tab->data(), reinterpret_cast<
+            const char*>(top_ -= n), n * sizeof(value));
+    }
+    access::construct_value(
+        top_++, tab, value_sp_);
 }
 
 void
@@ -216,15 +228,64 @@ value_stack::
 push_object(std::size_t n)
 {
     BOOST_ASSERT(top_ <= end_);
-    // we already have room if n > 0
-    // n is checked first because it's
-    // already in a register
-    if(BOOST_JSON_UNLIKELY(
-        ! n && top_ == end_))
-        grow();
-    detail::unchecked_object uo(
-        top_ -= n * 2, n, value_sp_);
-    exchange(std::move(uo));
+    using impl = detail::object_impl;
+    impl::table* tab;
+    if(BOOST_JSON_UNLIKELY(n == 0))
+    {
+        if(BOOST_JSON_UNLIKELY(top_ == end_))
+            grow();
+        tab = nullptr;
+    }
+    else
+    {
+        const std::size_t* prime = 
+            impl::bucket_sizes();
+        while(*prime < n)
+            ++prime;
+        const std::size_t cap = *prime;
+        // allocate up-front so we don't have to
+        // deal with memory leaks. if this throws,
+        // value_stack will clean up for us.
+        tab = ::new(value_sp_->allocate(
+            impl::allocation_size(cap))) impl::table{
+                std::uint32_t(n), std::uint32_t(cap),
+                std::size_t(prime - impl::bucket_sizes())};
+        tab->salt = reinterpret_cast<
+            std::uintptr_t>(tab);
+        std::memset(tab->data() + cap, 0xff, 
+            cap * sizeof(access::index_t));
+        value* end = top_;
+        value* src = top_ -= n * 2;
+        key_value_pair* dst = tab->data();
+        access::index_t next;
+        while(src != end)
+        {
+            string_view key = access::release_key(src[0]);
+            if(auto idx = impl::find_slot(tab, key, next))
+            {
+                access::construct_key_value_pair(
+                    dst, key, pilfer(src[1]));
+                access::next(*dst) = *idx;
+                *idx = static_cast<std::uint32_t>(
+                    dst - tab->data());
+                ++dst;
+            }
+            else
+            {
+                // handle duplicate
+                key_value_pair* dupe = tab->data() + next;
+                next = access::next(*dupe);
+                dupe->~key_value_pair();
+                access::next(access::
+                    construct_key_value_pair(dupe, key, 
+                        pilfer(src[1]))) = next;
+                --tab->size;
+            }
+            src += 2;
+        }
+    }
+    access::construct_value(
+        top_++, tab, value_sp_);
 }
 
 void
@@ -261,10 +322,10 @@ push_key(
     if(BOOST_JSON_UNLIKELY(top_ == end_))
         grow();
     if(BOOST_JSON_LIKELY(s.size() == n))
-        detail::value_access::construct_value(
+        access::construct_value(
             top_, s, detail::key_tag(), value_sp_);
     else
-         detail::value_access::construct_value(
+         access::construct_value(
             top_, release_string(n - s.size()), 
                 s, detail::key_tag(), value_sp_);
     ++top_;
@@ -280,10 +341,10 @@ push_string(
     if(BOOST_JSON_UNLIKELY(top_ == end_))
         grow();
     if(BOOST_JSON_LIKELY(s.size() == n))
-        detail::value_access::construct_value(
+        access::construct_value(
             top_, s, detail::string_tag(), value_sp_);
     else
-        detail::value_access::construct_value(
+        access::construct_value(
             top_, release_string(n - s.size()), 
                 s, detail::string_tag(), value_sp_);
     ++top_;

@@ -46,29 +46,6 @@ index_of(value const* pos) const noexcept ->
         std::size_t>(pos - data());
 }
 
-//----------------------------------------------------------
-
-unchecked_array::
-~unchecked_array()
-{
-    if(! data_ ||
-        sp_.is_not_counted_and_deallocate_is_trivial())
-        return;
-    for(std::size_t i = 0; i < size_; ++i)
-        data_[i].~value();
-}
-
-void
-unchecked_array::
-relocate(value* dest) noexcept
-{
-    if(size_ > 0)
-        std::memcpy(
-            reinterpret_cast<void*>(dest),
-            data_, size_ * sizeof(value));
-    data_ = nullptr;
-}
-
 } // detail
 BOOST_JSON_NS_END
 

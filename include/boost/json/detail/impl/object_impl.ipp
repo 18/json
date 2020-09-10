@@ -50,31 +50,34 @@ object_impl(
 }
 
 object_impl::
-object_impl(
-    unchecked_object&& uo,
-    const storage_ptr& sp)
+object_impl(table* tab) noexcept
+    : tab_(tab)
 {
-    std::size_t capacity = uo.size();
-    if(BOOST_JSON_LIKELY(capacity > 0))
-    {
-        std::size_t const* prime = 
-            object_impl::bucket_sizes();
-        while(*prime < capacity)
-            ++prime;
-        capacity = *prime;
-        tab_ = ::new(sp->allocate(
-            allocation_size(capacity))) 
-            table{uo.size(), capacity, 
-                static_cast<std::size_t>(prime - bucket_sizes()), 
-                reinterpret_cast<std::uintptr_t>(this)};
-        // capacity == buckets()
-        std::memset(reinterpret_cast<value_type*>(tab_ + 1) +
-            capacity, 0xff, capacity * sizeof(index_t));
-        if(sp.is_not_counted_and_deallocate_is_trivial())
-            build<false>(std::move(uo));
-        else
-            build<true>(std::move(uo));
-    }
+}
+
+auto
+object_impl::
+find_slot(
+    table* tab,
+    string_view key,
+    index_t& dupe) noexcept ->
+        index_t*
+{
+    const auto hash = detail::digest(
+        key.data(), key.size(), 
+            reinterpret_cast<std::uintptr_t>(tab));
+    index_t* head = reinterpret_cast<index_t*>(
+        tab->data() + tab->capacity) + 
+            bucket_index(hash, tab->prime_index);
+    index_t i = *head;
+    while(i != null_index &&
+        tab->data()[i].key() != key)
+        i = next(tab->data()[i]);
+    if(BOOST_JSON_LIKELY(i == null_index))
+        return head;
+    // duplicate
+    dupe = i;
+    return nullptr;
 }
 
 object_impl::
@@ -94,55 +97,6 @@ clear() noexcept
     std::memset(bucket_begin(), 0xff, // null_index
         buckets() * sizeof(index_t));
     tab_->size = 0;
-}
-
-// checks for dupes
-template<bool NeedDestroy>
-void
-object_impl::
-build(unchecked_object&& uo) noexcept
-{
-    // insert all elements, keeping
-    // the last of any duplicate keys.
-    auto src = uo.release();
-    auto const end = src + 2 * uo.size();
-    auto dest = begin();
-    while(src != end)
-    {
-        value_access::construct_key_value_pair(
-            dest, pilfer(src[0]), pilfer(src[1]));
-        if(NeedDestroy)
-        {
-            src[0].~value();
-            src[1].~value();
-        }
-        src += 2;
-        auto head = &bucket(dest->key());
-        auto i = *head;
-        while(i != null_index &&
-            get(i).key() != dest->key())
-            i = next(get(i));
-        if(i != null_index)
-        {
-            // handle duplicate
-            auto& dup = get(i);
-            next(*dest) = next(dup);
-            // don't bother checking if
-            // storage deallocate is null
-            dup.~key_value_pair();
-            // trivial relocate
-            std::memcpy(
-                reinterpret_cast<void*>(&dup),
-                    dest, sizeof(dup));
-            --tab_->size;
-        }
-        else
-        {
-            next(*dest) = *head;
-            *head = index_of(*dest);
-            ++dest;
-        }
-    }
 }
 
 // does not check for dupes

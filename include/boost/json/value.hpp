@@ -74,10 +74,17 @@ class value
     friend struct detail::value_access;
 #endif
 
+    using array_impl = detail::array_impl;
+    using object_impl = detail::object_impl;
+
     // VFALCO Why are these in
     // detail/value.hpp instead of detail/value.ipp?
-    inline value(detail::unchecked_object&& uo);
-    inline value(detail::unchecked_array&& ua);
+    inline value(
+        object_impl::table* tab,
+        const storage_ptr& sp) noexcept;
+    inline value(
+        array_impl::table* tab,
+        const storage_ptr& sp) noexcept;
 
     inline value(
         string_view s, 
@@ -2860,7 +2867,7 @@ class key_value_pair
 
     inline
     key_value_pair(
-        pilfered<json::value> k,
+        string_view key,
         pilfered<json::value> v) noexcept;
 
 public:

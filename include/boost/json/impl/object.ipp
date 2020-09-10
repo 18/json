@@ -73,9 +73,11 @@ public:
 //----------------------------------------------------------
 
 object::
-object(detail::unchecked_object&& uo)
-    : sp_(uo.storage())
-    , impl_(std::move(uo), sp_)
+object(
+    object_impl::table* tab,
+    const storage_ptr& sp) noexcept
+    : sp_(sp)
+    , impl_(tab)
 {
 }
 

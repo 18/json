@@ -91,7 +91,9 @@ class object
 
     BOOST_JSON_DECL
     explicit
-    object(detail::unchecked_object&& uo);
+    object(
+        object_impl::table* tab,
+        const storage_ptr& sp) noexcept;
 
     friend class object_test;
 

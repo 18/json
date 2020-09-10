@@ -139,6 +139,7 @@ class value_stack
     template<class... Args> void push(Args&&... args);
     template<class Unchecked> void exchange(Unchecked&& u);
 
+    using access = detail::value_access;
 
 public:
     /** Destructor.

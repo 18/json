@@ -25,55 +25,6 @@ class key_value_pair;
 
 namespace detail {
 
-class unchecked_object
-{
-    // each element is two values,
-    // first one is a string key,
-    // second one is the value.
-    value* data_;
-    std::size_t size_;
-    storage_ptr const& sp_;
-
-public:
-    inline
-    ~unchecked_object();
-
-    unchecked_object(
-        value* data,
-        std::size_t size, // # of kv-pairs
-        storage_ptr const& sp) noexcept
-        : data_(data)
-        , size_(size)
-        , sp_(sp)
-    {
-    }
-
-    unchecked_object(
-        const unchecked_object&) = delete;
-
-    storage_ptr const&
-    storage() const noexcept
-    {
-        return sp_;
-    }
-
-    std::size_t
-    size() const noexcept
-    {
-        return size_;
-    }
-
-    value*
-    release() noexcept
-    {
-        auto const data = data_;
-        data_ = nullptr;
-        return data;
-    }
-};
-
-//----------------------------------------------------------
-
 class object_impl
 {
     using index_t = std::uint32_t;
@@ -89,6 +40,24 @@ public:
     using value_type =
         key_value_pair;
 
+    // VFALCO Don't we need to align this?
+    struct
+        //alignas(alignof(key_value_pair))
+        table
+    {
+        std::size_t size;
+        std::size_t const capacity;
+        std::size_t const prime_index;
+        std::uintptr_t salt;
+
+        key_value_pair*
+        data() noexcept
+        {
+            return reinterpret_cast<
+                key_value_pair*>(this + 1);
+        }
+    };
+
     object_impl() = default;
 
     inline
@@ -99,9 +68,7 @@ public:
         storage_ptr const& sp);
 
     inline
-    object_impl(
-        unchecked_object&& uo,
-        const storage_ptr& sp);
+    object_impl(table* tab) noexcept;
     
     inline
     object_impl(object_impl&& other) noexcept;
@@ -186,10 +153,6 @@ public:
         tab_->size -= n;
     }
 
-    template<bool NeedDestroy>
-    void
-    build(unchecked_object&& uo) noexcept;
-
     inline
     void
     rebuild() noexcept;
@@ -238,6 +201,14 @@ public:
     std::size_t
     digest(string_view key) const noexcept;
 
+    static
+    inline
+    index_t*
+    find_slot(
+        table* tab,
+        string_view key,
+        index_t& dupe) noexcept;
+
 private:
     std::size_t
     buckets() const noexcept
@@ -248,17 +219,6 @@ private:
     inline
     index_t*
     bucket_begin() const noexcept;
-
-    // VFALCO Don't we need to align this?
-    struct
-        //alignas(alignof(key_value_pair))
-        table
-    {
-        std::size_t size;
-        std::size_t const capacity;
-        std::size_t const prime_index;
-        std::uintptr_t const salt;
-    };
 
     table* tab_ = nullptr;
 };

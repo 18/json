@@ -36,23 +36,6 @@ array_impl(
 }
 
 array_impl::
-array_impl(
-    unchecked_array&& ua,
-    storage_ptr const& sp)
-{
-    const std::size_t n = ua.size();
-    if(BOOST_JSON_LIKELY(n > 0))
-    {
-        tab_ = ::new(sp->allocate(
-            allocation_size(n))) table{
-            static_cast<std::uint32_t>(n),
-            static_cast<std::uint32_t>(n)};
-        ua.relocate(reinterpret_cast<
-            value*>(tab_ + 1));
-    }
-}
-
-array_impl::
 array_impl(array_impl&& other) noexcept
     : tab_(detail::exchange(
         other.tab_, nullptr))

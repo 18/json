@@ -234,24 +234,6 @@ next(value_type const& e) noexcept ->
     return value_access::next(e);
 }
 
-//----------------------------------------------------------
-
-unchecked_object::
-~unchecked_object()
-{
-    if( data_ &&
-        ! sp_.is_not_counted_and_deallocate_is_trivial())
-    {
-        value* p = data_;
-        while(size_--)
-        {
-            p[0].~value();
-            p[1].~value();
-            p += 2;
-        }
-    }
-}
-
 } // detail
 BOOST_JSON_NS_END
 

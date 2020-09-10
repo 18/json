@@ -95,7 +95,9 @@ class array
 
     BOOST_JSON_DECL
     explicit
-    array(detail::unchecked_array&& ua);
+    array(
+        array_impl::table* tab,
+        const storage_ptr& sp) noexcept;
 
 public:
     /** The type of _Allocator_ returned by @ref get_allocator

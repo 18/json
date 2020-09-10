@@ -173,7 +173,7 @@ struct value_access
     {
         return *reinterpret_cast<
             Value*>(::new(p) Value(
-            std::forward<Args>(args)...));
+                std::forward<Args>(args)...));
     }
 
     template<class KeyValuePair, class... Args>
@@ -190,13 +190,14 @@ struct value_access
 
     template<class Value>
     static
-    char const*
-    release_key(
-        Value& jv,
-        std::size_t& len) noexcept
+    string_view
+    release_key(Value& jv) noexcept
     {
         BOOST_ASSERT(jv.is_string());
-        return jv.str_.impl_.release_key(len);
+        // decrease the ref-count, but
+        // don't deallocate
+        jv.str_.sp_.~storage_ptr();
+        return jv.str_.impl_.release_key();
     }
 
     using index_t = std::uint32_t;

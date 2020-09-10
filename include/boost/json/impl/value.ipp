@@ -376,13 +376,13 @@ destroy() noexcept
 
 key_value_pair::
 key_value_pair(
-    pilfered<json::value> key,
+    string_view key,
     pilfered<json::value> value) noexcept
     : value_(value)
-{
-    std::size_t len;
-    key_ = detail::value_access::release_key(key.get(), len);
-    len_ = static_cast<std::uint32_t>(len);
+{   
+    key_ = key.data();
+    len_ = static_cast<
+        std::uint32_t>(key.size());
 }
 
 key_value_pair::
