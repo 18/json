@@ -76,39 +76,27 @@ class value
 
     using array_impl = detail::array_impl;
     using object_impl = detail::object_impl;
+    using string_impl = detail::string_impl;
 
     // VFALCO Why are these in
     // detail/value.hpp instead of detail/value.ipp?
     inline value(
         object_impl::table* tab,
         const storage_ptr& sp) noexcept;
+
     inline value(
         array_impl::table* tab,
         const storage_ptr& sp) noexcept;
 
     inline value(
-        string_view s, 
-        detail::string_tag,
-        const storage_ptr& sp);
+        string_impl::table* tab,
+        const storage_ptr& sp) noexcept;
 
     inline value(
-        string_view s, 
+        char* p,
+        std::size_t n,
         detail::key_tag,
-        const storage_ptr& sp);
-
-    inline value(
-        string_view s1, 
-        string_view s2, 
-        detail::string_tag,
-        const storage_ptr& sp);
-
-    inline value(
-        string_view s1, 
-        string_view s2, 
-        detail::key_tag,
-        const storage_ptr& sp);
-
-    inline char const* release_key(std::size_t& len) noexcept;
+        const storage_ptr& sp) noexcept;
 
 public:
     /** The type of _Allocator_ returned by @ref get_allocator

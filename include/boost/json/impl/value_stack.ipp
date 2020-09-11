@@ -102,22 +102,6 @@ grow(
 
 //--------------------------------------
 
-string_view
-value_stack::
-release_string(
-    std::size_t n) noexcept
-{
-    // ensure a pushed value cannot
-    // clobber the released string.
-    BOOST_ASSERT(
-        reinterpret_cast<char*>(
-            top_ + 1) + n <=
-        reinterpret_cast<char*>(
-            end_));
-    return { reinterpret_cast<
-        char const*>(top_ + 1), n };
-}
-
 template<class... Args>
 void
 value_stack::
@@ -128,27 +112,6 @@ push(Args&&... args)
         grow();
     access::construct_value(
         top_, std::forward<Args>(args)..., value_sp_);
-    ++top_;
-}
-
-template<class Unchecked>
-void
-value_stack::
-exchange(Unchecked&& u)
-{
-    union U
-    {
-        value v;
-        U() {}
-        ~U() {}
-    } jv;
-    // construct value on the stack
-    // to avoid clobbering top_[0],
-    // which belongs to `u`.
-    access::construct_value(
-        &jv.v, std::move(u));
-    std::memcpy(reinterpret_cast<
-        char*>(top_), &jv.v, sizeof(value));
     ++top_;
 }
 
@@ -321,13 +284,20 @@ push_key(
     // fast path when s is the full key
     if(BOOST_JSON_UNLIKELY(top_ == end_))
         grow();
-    if(BOOST_JSON_LIKELY(s.size() == n))
-        access::construct_value(
-            top_, s, detail::key_tag(), value_sp_);
-    else
-         access::construct_value(
-            top_, release_string(n - s.size()), 
-                s, detail::key_tag(), value_sp_);
+    char* ptr = static_cast<char*>(
+        value_sp_->allocate(n + 1));
+    char* dest = ptr;
+    ptr[n] = 0;
+    if(BOOST_JSON_UNLIKELY(s.size() != n))
+    {
+        const std::size_t saved = 
+            n - s.size();
+        std::memcpy(dest, top_ + 1, saved);
+        dest += saved;
+    }
+    std::memcpy(dest, s.data(), s.size());
+    access::construct_value(top_, ptr, n,
+        detail::key_tag(), value_sp_);
     ++top_;
 }
 
@@ -337,16 +307,43 @@ push_string(
     string_view s,
     std::size_t n)
 {
-    // fast path when s is the full string
     if(BOOST_JSON_UNLIKELY(top_ == end_))
         grow();
-    if(BOOST_JSON_LIKELY(s.size() == n))
-        access::construct_value(
-            top_, s, detail::string_tag(), value_sp_);
+    using impl = detail::string_impl;
+    if(n > impl::sbo_chars_)
+    {
+        impl::table* ptr = ::new(value_sp_->allocate(
+            sizeof(impl::table) + n + 1)) impl::table{
+                std::uint32_t(n), std::uint32_t(n)};
+        char* dest = ptr->data();
+        dest[n] = 0;
+        if(BOOST_JSON_UNLIKELY(s.size() != n))
+        {
+            const std::size_t saved = 
+                n - s.size();
+            std::memcpy(dest, top_ + 1, saved);
+            dest += saved;
+        }
+        std::memcpy(dest, s.data(), s.size());
+        access::construct_value(top_, ptr, value_sp_);
+    }
     else
-        access::construct_value(
-            top_, release_string(n - s.size()), 
-                s, detail::string_tag(), value_sp_);
+    {
+        value& str = access::construct_value(top_,
+            string_kind, value_sp_);
+        char* dest = access::get_small_buffer(str);
+        dest[impl::sbo_chars_] = 
+            impl::sbo_chars_ - n;
+        dest[n] = 0;
+        if(BOOST_JSON_UNLIKELY(s.size() != n))
+        {
+            const std::size_t saved = 
+                n - s.size();
+            std::memcpy(dest, top_ + 1, saved);
+            dest += saved;
+        }
+        std::memcpy(dest, s.data(), s.size());
+    }
     ++top_;
 }
 

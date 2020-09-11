@@ -26,10 +26,19 @@ namespace detail {
 
 class string_impl
 {
+    friend struct value_access;
+public:
     struct table
     {
         std::uint32_t size;
         std::uint32_t capacity;
+
+        char*
+        data() noexcept
+        {
+            return reinterpret_cast<
+                char*>(this + 1);
+        }
     };
 
     static
@@ -85,6 +94,7 @@ class string_impl
         char* s;
     };
 
+private:
     union
     {
         sbo s_;
@@ -109,34 +119,17 @@ public:
     string_impl() noexcept;
 
     BOOST_JSON_DECL
+    string_impl(table* tab) noexcept;
+
+    BOOST_JSON_DECL
+    string_impl(
+        char* p,
+        std::size_t n,
+        key_tag) noexcept;
+
+    BOOST_JSON_DECL
     string_impl(
         std::size_t new_size,
-        storage_ptr const& sp);
-
-    BOOST_JSON_DECL
-    string_impl(
-        string_view s,
-        string_tag,
-        storage_ptr const& sp);
-
-    BOOST_JSON_DECL
-    string_impl(
-        string_view s,
-        key_tag,
-        storage_ptr const& sp);
-
-    BOOST_JSON_DECL
-    string_impl(
-        string_view s1,
-        string_view s2,
-        string_tag,
-        storage_ptr const& sp);
-
-    BOOST_JSON_DECL
-    string_impl(
-        string_view s1,
-        string_view s2,
-        key_tag,
         storage_ptr const& sp);
 
     template<class InputIt>

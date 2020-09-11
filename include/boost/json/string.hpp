@@ -66,29 +66,15 @@ class string
 
     inline
     string(
-        string_view s,
-        detail::string_tag,
-        storage_ptr sp);
+        string_impl::table* tab,
+        const storage_ptr& sp) noexcept;
 
     inline
     string(
-        string_view s, 
+        char* p,
+        std::size_t n,
         detail::key_tag,
-        storage_ptr sp);
-
-    inline
-    string(
-        string_view s1, 
-        string_view s2,
-        detail::string_tag,
-        storage_ptr sp);
-
-    inline
-    string(
-        string_view s1, 
-        string_view s2,
-        detail::key_tag,
-        storage_ptr sp);
+        const storage_ptr& sp) noexcept;
 
 public:
     /** The type of _Allocator_ returned by @ref get_allocator

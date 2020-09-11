@@ -19,7 +19,7 @@ BOOST_JSON_NS_BEGIN
 class natvis_test
 {
 public:
-    static
+    /*static
     value
     make_key(string_view s)
     {
@@ -27,7 +27,7 @@ public:
         detail::value_access::construct_value(
             &jv, s, detail::key_tag(), storage_ptr());
         return jv;
-    }
+    }*/
 
     void
     run()
@@ -39,7 +39,7 @@ public:
         value jv0 = { 1, 2, 3 };
         value jv1 = { {"a",1}, {"b",2}, {"c",3} };
         value jv2 = "dynamically-allocated-string";
-        value jv3 = make_key("key");
+        //value jv3 = make_key("key");
         value jv4 = "string";
         value jv5 = 3.141;
         value jv6 = -1;
@@ -50,7 +50,7 @@ public:
         array&  x0 = jv0.get_array();  (void)x0;
         object& x1 = jv1.get_object(); (void)x1;
         string& x2 = jv2.get_string(); (void)x2;
-        string& x3 = jv3.get_string(); (void)x3;
+        //string& x3 = jv3.get_string(); (void)x3;
         string& x4 = jv4.get_string(); (void)x4;
 
         array y0;

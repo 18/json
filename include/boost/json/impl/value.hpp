@@ -68,39 +68,19 @@ value(
 
 value::
 value(
-    string_view s, 
-    detail::string_tag,
-    const storage_ptr& sp)
-    : str_(s, detail::string_tag(), sp)
+    string_impl::table* tab,
+    const storage_ptr& sp) noexcept
+    : str_(tab, sp)
 {
 }
 
 value::
 value(
-    string_view s, 
+    char* p,
+    std::size_t n,
     detail::key_tag,
-    const storage_ptr& sp)
-    : str_(s, detail::key_tag(), sp)
-{
-}
-
-value::
-value(
-    string_view s1, 
-    string_view s2, 
-    detail::string_tag,
-    const storage_ptr& sp)
-    : str_(s1, s2, detail::string_tag(), sp)
-{
-}
-
-value::
-value(
-    string_view s1, 
-    string_view s2,
-    detail::key_tag,
-    const storage_ptr& sp)
-    : str_(s1, s2, detail::key_tag(), sp)
+    const storage_ptr& sp) noexcept
+    : str_(p, n, detail::key_tag(), sp)
 {
 }
 

@@ -20,6 +20,7 @@ namespace detail {
 
 struct string_tag { };
 struct key_tag { };
+struct sbo_tag { };
 
 struct int64_k
 {
@@ -198,6 +199,15 @@ struct value_access
         // don't deallocate
         jv.str_.sp_.~storage_ptr();
         return jv.str_.impl_.release_key();
+    }
+
+    template<class Value>
+    static
+    char*
+    get_small_buffer(Value& jv) noexcept
+    {
+        BOOST_ASSERT(jv.is_string());
+        return jv.str_.impl_.s_.buf;
     }
 
     using index_t = std::uint32_t;
