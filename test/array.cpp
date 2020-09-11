@@ -1080,6 +1080,16 @@ public:
     }
 
     void
+    testEquality()
+    {
+        BOOST_TEST(array({}) == array({}));
+        BOOST_TEST(array({}) != array({1,2}));
+        BOOST_TEST(array({1,2,3}) == array({1,2,3}));
+        BOOST_TEST(array({1,2,3}) != array({1,2}));
+        BOOST_TEST(array({1,2,3}) != array({3,2,1}));
+    }
+
+    void
     run()
     {
         testCtors();
@@ -1090,6 +1100,7 @@ public:
         testCapacity();
         testModifiers();
         testExceptions();
+        testEquality();
     }
 };
 
