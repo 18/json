@@ -13,29 +13,6 @@
 BOOST_JSON_NS_BEGIN
 namespace detail {
 
-constexpr
-std::size_t
-array_impl::
-max_size() noexcept
-{
-    // max_size depends on the address model
-    using min = std::integral_constant<std::size_t,
-        (std::size_t(-1) - sizeof(table)) / sizeof(value)>;
-    return min::value < BOOST_JSON_MAX_STRUCTURED_SIZE ?
-        min::value : BOOST_JSON_MAX_STRUCTURED_SIZE;
-}
-
-auto
-array_impl::
-index_of(value const* pos) const noexcept ->
-    std::size_t
-{
-    return static_cast<
-        std::size_t>(pos - data());
-}
-
-//----------------------------------------------------------
-
 unchecked_array::
 ~unchecked_array()
 {

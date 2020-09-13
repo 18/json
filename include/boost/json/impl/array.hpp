@@ -68,6 +68,51 @@ public:
     }
 };
 
+auto
+array::
+header::
+allocate(
+    std::uint32_t n,
+    const storage_ptr& sp) ->
+        header*
+{
+    BOOST_STATIC_ASSERT(
+        sizeof(header) <= sizeof(value));
+    return ::new(sp->allocate(
+        (n + 1) * sizeof(value))) header(n);
+}
+
+void
+array::
+header::
+deallocate(
+    const storage_ptr& sp) noexcept
+{
+    if(! sp.is_not_counted_and_deallocate_is_trivial())
+        sp->deallocate(this, (capacity + 1) * sizeof(value));
+}
+
+value*
+array::
+header::
+data() noexcept
+{
+    return reinterpret_cast<
+        value*>(this) + 1;
+}
+
+constexpr
+std::size_t
+array::
+max_size() noexcept
+{
+    // max_size depends on the address model
+    using min = std::integral_constant<std::size_t,
+        (std::size_t(-1) - sizeof(value)) / sizeof(value)>;
+    return min::value < BOOST_JSON_MAX_STRUCTURED_SIZE ?
+        min::value : BOOST_JSON_MAX_STRUCTURED_SIZE;
+}
+
 //----------------------------------------------------------
 //
 // Element access
@@ -78,62 +123,66 @@ value&
 array::
 at(std::size_t pos)
 {
-    if(pos >= impl_.size())
+    if(! ptr_ || pos >= ptr_->size)
         detail::throw_out_of_range(
             BOOST_CURRENT_LOCATION);
-    return impl_.data()[pos];
+    return ptr_->data()[pos];
 }
 
 value const&
 array::
 at(std::size_t pos) const
 {
-    if(pos >= impl_.size())
+    if(! ptr_ || pos >= ptr_->size)
         detail::throw_out_of_range(
             BOOST_CURRENT_LOCATION);
-    return impl_.data()[pos];
+    return ptr_->data()[pos];
 }
 
 value&
 array::
 operator[](std::size_t pos) noexcept
 {
-    return impl_.data()[pos];
+    return ptr_->data()[pos];
 }
 
 value const&
 array::
 operator[](std::size_t pos) const noexcept
 {
-    return impl_.data()[pos];
+    return ptr_->data()[pos];
 }
 
 value&
 array::
 front() noexcept
 {
-    return *impl_.data();
+    BOOST_ASSERT(ptr_);
+    return *ptr_->data();
 }
 
 value const&
 array::
 front() const noexcept
 {
-    return *impl_.data();
+    BOOST_ASSERT(ptr_);
+    return *ptr_->data();
 }
 
 value&
 array::
 back() noexcept
 {
-    return impl_.data()[impl_.size() - 1];
+    BOOST_ASSERT(ptr_);
+    return ptr_->data()[ptr_->size - 1];
 }
 
 value const&
 array::
 back() const noexcept
 {
-    return impl_.data()[impl_.size() - 1];
+    BOOST_ASSERT(ptr_);
+    return ptr_->data()[ptr_->size - 1];
 }
 
 
@@ -141,32 +190,32 @@ value*
 array::
 data() noexcept
 {
-    return impl_.data();
-}
-
-value const*
-array::
-contains(std::size_t pos) const noexcept
-{
-    if( pos < size() )
-        return impl_.data() + pos;
-    return nullptr;
-}
-
-value*
-array::
-contains(std::size_t pos) noexcept
-{
-    if( pos < size() )
-        return impl_.data() + pos;
-    return nullptr;
+    return ptr_ ? ptr_->data() : nullptr;
 }
 
 value const*
 array::
 data() const noexcept
 {
-    return impl_.data();
+    return ptr_ ? ptr_->data() : nullptr;
+}
+
+value const*
+array::
+contains(std::size_t pos) const noexcept
+{
+    if(! ptr_ || pos >= ptr_->size)
+        return nullptr;
+    return ptr_->data() + pos;
+}
+
+value*
+array::
+contains(std::size_t pos) noexcept
+{
+    if(! ptr_ || pos >= ptr_->size)
+        return nullptr;
+    return ptr_->data() + pos;
 }
 
 //----------------------------------------------------------
@@ -180,7 +229,7 @@ array::
 begin() noexcept ->
     iterator
 {
-    return impl_.data();
+    return data();
 }
 
 auto
@@ -188,7 +237,7 @@ array::
 begin() const noexcept ->
     const_iterator
 {
-    return impl_.data();
+    return data();
 }
 
 auto
@@ -196,7 +245,7 @@ array::
 cbegin() const noexcept ->
     const_iterator
 {
-    return impl_.data();
+    return begin();
 }
 
 auto
@@ -204,7 +253,8 @@ array::
 end() noexcept ->
     iterator
 {
-    return impl_.data() + impl_.size();
+    return ptr_ ? ptr_->data() + 
+        ptr_->size : nullptr;
 }
 
 auto
@@ -212,7 +262,8 @@ array::
 end() const noexcept ->
     const_iterator
 {
-    return impl_.data() + impl_.size();
+    return ptr_ ? ptr_->data() + 
+        ptr_->size : nullptr;
 }
 
 auto
@@ -220,7 +271,7 @@ array::
 cend() const noexcept ->
     const_iterator
 {
-    return impl_.data() + impl_.size();
+    return end();
 }
 
 auto
@@ -228,8 +279,7 @@ array::
 rbegin() noexcept ->
     reverse_iterator
 {
-    return reverse_iterator(
-        impl_.data() + impl_.size());
+    return reverse_iterator(end());
 }
 
 auto
@@ -237,8 +287,7 @@ array::
 rbegin() const noexcept ->
     const_reverse_iterator
 {
-    return const_reverse_iterator(
-        impl_.data() + impl_.size());
+    return const_reverse_iterator(end());
 }
 
 auto
@@ -246,8 +295,7 @@ array::
 crbegin() const noexcept ->
     const_reverse_iterator
 {
-    return const_reverse_iterator(
-        impl_.data() + impl_.size());
+    return const_reverse_iterator(cend());
 }
 
 auto
@@ -255,8 +303,7 @@ array::
 rend() noexcept ->
     reverse_iterator
 {
-    return reverse_iterator(
-        impl_.data());
+    return reverse_iterator(begin());
 }
 
 auto
@@ -264,8 +311,7 @@ array::
 rend() const noexcept ->
     const_reverse_iterator
 {
-    return const_reverse_iterator(
-        impl_.data());
+    return const_reverse_iterator(begin());
 }
 
 auto
@@ -273,8 +319,7 @@ array::
 crend() const noexcept ->
     const_reverse_iterator
 {
-    return const_reverse_iterator(
-        impl_.data());
+    return const_reverse_iterator(cbegin());
 }
 
 //----------------------------------------------------------
@@ -323,10 +368,31 @@ emplace(
     Arg&& arg) ->
         iterator
 {
-    undo_insert u(pos, 1, *this);
-    u.emplace(std::forward<Arg>(arg));
-    u.commit = true;
-    return impl_.data() + u.pos;
+    BOOST_ASSERT(ptr_);
+    const auto n = ptr_->size;
+    const auto index = 
+        pos - ptr_->data();
+    if(n >= max_size())
+        detail::throw_length_error(
+            "array too large",
+            BOOST_CURRENT_LOCATION);
+    reserve(ptr_->size + 1);
+    union U
+    {
+        value v;
+
+        U() { }
+        ~U() { }
+    } u;
+    ::new(&u.v) value(
+        std::forward<Arg>(arg), sp_);
+    const auto dest = ptr_->data() + index;
+    const auto end = ptr_->data() + n;
+    std::memmove(dest + 1, dest, 
+        (end - dest) * sizeof(value));
+    std::memcpy(dest, &u.v, sizeof(value));
+    ++ptr_->size;
+    return dest;
 }
 
 template<class Arg>
@@ -334,11 +400,10 @@ value&
 array::
 emplace_back(Arg&& arg)
 {
-    reserve(impl_.size() + 1);
+    reserve(size() + 1);
     auto& v = *::new(
-        impl_.data() + impl_.size()) value(
+        ptr_->data() + ptr_->size++) value(
             std::forward<Arg>(arg), sp_);
-    impl_.size(impl_.size() + 1);
     return v;
 }
 
@@ -359,11 +424,11 @@ array(
     undo_construct u(*this);
     while(first != last)
     {
-        if(impl_.size() >= impl_.capacity())
-            reserve(impl_.size() + 1);
-        ::new(impl_.data() + impl_.size()) value(
+        if(size() >= capacity())
+            reserve(size() + 1);
+        ::new(data() + size()) value(
             *first++, sp_);
-        impl_.size(impl_.size() + 1);
+        ++ptr_->size;
     }
     u.commit = true;
 }
@@ -380,20 +445,22 @@ array(
     auto const n =
         static_cast<std::size_t>(
             std::distance(first, last));
-    if(n > max_size())
-        detail::throw_length_error(
-            "array too large",
-            BOOST_CURRENT_LOCATION);
-    reserve(static_cast<std::size_t>(n));
-    while(impl_.size() < n)
+    if(n)
     {
-        ::new(
-            impl_.data() +
-            impl_.size()) value(
-                *first++, sp_);
-        impl_.size(impl_.size() + 1);
+        if(n > max_size())
+            detail::throw_length_error(
+                "array too large",
+                BOOST_CURRENT_LOCATION);
+        ptr_ = header::allocate(n, sp_);
+        ptr_->size = 0;
+        while(size() < n)
+        {
+            ::new(data() + size()) 
+                value(*first++, sp_);
+            ++ptr_->size;
+        }
+        u.commit = true;
     }
-    u.commit = true;
 }
 
 template<class InputIt>
@@ -406,17 +473,17 @@ insert(
         iterator
 {
     if(first == last)
-        return impl_.data() +
-            impl_.index_of(pos);
+        return const_cast<iterator>(pos);
     array tmp(first, last, sp_);
     undo_insert u(
-        pos, tmp.impl_.size(), *this);
+        pos, tmp.size(), *this);
     relocate(u.it,
-        tmp.impl_.data(), tmp.impl_.size());
+        tmp.data(), tmp.size());
     // don't destroy values in tmp
-    tmp.impl_.size(0);
+    if(! tmp.empty())
+        tmp.ptr_->size = 0;
     u.commit = true;
-    return impl_.data() + u.pos;
+    return data() + u.pos;
 }
 
 template<class InputIt>

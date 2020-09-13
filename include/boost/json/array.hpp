@@ -81,12 +81,37 @@ class value_ref;
 */
 class array
 {
-    using array_impl = detail::array_impl;
+    struct header
+    {
+        std::uint32_t size;
+        std::uint32_t capacity;
+
+        header(std::size_t n) noexcept
+            : capacity(n)
+        {
+        }
+
+        inline
+        value*
+        data() noexcept;
+
+        inline
+        static
+        header*
+        allocate(
+            std::uint32_t capacity,
+            const storage_ptr& sp);
+
+        inline
+        void deallocate(
+            const storage_ptr& sp) noexcept;
+    };
 
     storage_ptr sp_;    // must come first
     kind k_ =           // must come second
         kind::array;
-    array_impl impl_;
+    //array_impl impl_;
+    header* ptr_ = nullptr;
 
     class undo_construct;
     class undo_insert;
@@ -157,10 +182,11 @@ public:
     */
     ~array()
     {
-        if( ! impl_.data() ||
-            sp_.is_not_counted_and_deallocate_is_trivial())
-            return;
-        destroy();
+        if(ptr_)
+        {
+            destroy(ptr_->data(), ptr_->size);
+            ptr_->deallocate(sp_);
+        }
     }
 
     //------------------------------------------------------
@@ -983,7 +1009,7 @@ public:
     bool
     empty() const noexcept
     {
-        return impl_.size() == 0;
+        return ! ptr_ || ! ptr_->size;
     }
 
     /** Return the number of elements in the array.
@@ -1001,7 +1027,7 @@ public:
     std::size_t
     size() const noexcept
     {
-        return impl_.size();
+        return ptr_ ? ptr_->size : 0;
     }
 
     /** Return the maximum number of elements any array can hold.
@@ -1020,10 +1046,7 @@ public:
     static
     constexpr
     std::size_t
-    max_size() noexcept
-    {
-        return array_impl::max_size();
-    }
+    max_size() noexcept;
 
     /** Return the number of elements that can be held in currently allocated memory.
 
@@ -1039,7 +1062,7 @@ public:
     std::size_t
     capacity() const noexcept
     {
-        return impl_.capacity();
+        return ptr_ ? ptr_->capacity : 0;
     }
 
     /** Increase the capacity to at least a certain amount.
@@ -1075,7 +1098,7 @@ public:
     reserve(std::size_t new_capacity)
     {
         // never shrink
-        if(new_capacity <= impl_.capacity())
+        if(new_capacity <= capacity())
             return;
         reserve_impl(new_capacity);
     }
@@ -1673,6 +1696,12 @@ private:
     destroy(
         value* first,
         value* last) noexcept;
+
+    inline
+    void
+    destroy(
+        value* ptr,
+        std::size_t n) noexcept;
 
     BOOST_JSON_DECL
     void
