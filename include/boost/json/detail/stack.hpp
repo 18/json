@@ -91,6 +91,14 @@ public:
         std::memcpy(
             &t, buf_ + size_, n);
     }
+
+    template<class T>
+    void
+    pop()
+    {
+        BOOST_ASSERT(size_ >= sizeof(T));
+        size_ -= sizeof(T);
+    }
 };
 
 } // detail

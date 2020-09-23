@@ -401,41 +401,24 @@ class basic_parser
     template<bool StackEmpty, bool AllowComments,
         bool AllowTrailing, bool AllowBadUTF8>
     const char* parse_value(const char* p);
-    
-    template<bool StackEmpty, bool AllowComments,
-        bool AllowTrailing, bool AllowBadUTF8>
-    const char* resume_value(const char* p);
-    
-    template<bool StackEmpty, bool AllowComments,
-        bool AllowTrailing, bool AllowBadUTF8>
-    const char* parse_object(const char* p);
-    
-    template<bool StackEmpty, bool AllowComments,
-        bool AllowTrailing, bool AllowBadUTF8>
-    const char* parse_array(const char* p);
-    
-    template<bool StackEmpty>
-    const char* parse_null(const char* p);
-    
-    template<bool StackEmpty>
-    const char* parse_true(const char* p);
-    
-    template<bool StackEmpty>
-    const char* parse_false(const char* p);
 
     template<bool StackEmpty, bool IsKey,
         bool AllowBadUTF8>
+    BOOST_FORCEINLINE
     const char* parse_string(const char* p);
     
     template<bool StackEmpty, char First>
+    BOOST_FORCEINLINE
     const char* parse_number(const char* p);
     
     template<bool StackEmpty, bool IsKey,
         bool AllowBadUTF8>
+    BOOST_FORCEINLINE
     const char* parse_unescaped(const char* p);
 
     template<bool StackEmpty, bool IsKey,
         bool AllowBadUTF8>
+    BOOST_FORCEINLINE
     const char* parse_escaped(
         const char* p, 
         std::size_t total = 0);
@@ -674,6 +657,11 @@ public:
         char const* data,
         std::size_t size,
         error_code& ec);
+
+    const char* parse_standard(const char* p)
+    {
+        return parse_value<true, false, false, false>(p); 
+    }
 };
 
 BOOST_JSON_NS_END
