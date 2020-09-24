@@ -575,23 +575,609 @@ const char*
 basic_parser<Handler>::
 parse_value(const char* p)
 {
-    // stack frame data
     detail::const_stream_wrapper cs(p, end_);
-    std::size_t total;
+    // stack frame data
+    std::size_t total = 0;
+    const void* return_address = &&return_ok;
+    // parse data
+    bool is_key = false;
+    number num;
+    std::size_t str;
+    const char* begin;
     if(StackEmpty || st_.empty())
     {
-        switch(*p)
+do_val1:
+        switch(*cs)
         {
         default:
-            return fail(p, error::syntax);
-        case '0':
-            return parse_number<true, '0'>(p);
-        case '-':
-            return parse_number<true, '-'>(p);
-        case '1': case '2': case '3':
-        case '4': case '5': case '6':
-        case '7': case '8': case '9':
-            return parse_number<true, '+'>(p);
+            return fail(cs.begin(), error::syntax);
+        case '0': case '-': case '1': 
+        case '2': case '3': case '4':
+        case '5': case '6': case '7':
+        case '8': case '9':
+        {
+            begin = cs.begin();
+            num.bias = 0;
+            num.exp = 0;
+            num.frac = false;
+
+            //----------------------------------
+            //
+            // '-'
+            // leading minus sign
+            //
+            BOOST_ASSERT(cs);
+            if(*cs == '-')
+            {
+                num.neg = true;
+                ++cs;
+            }
+            else
+            {
+                num.neg = false;
+            }
+
+            num.frac = false;
+            num.exp = 0;
+            num.bias = 0;
+
+            // fast path
+            if( cs.remain() >= 16 + 1 + 16 ) // digits . digits
+            {
+                int n1;
+
+                if( *cs != '0' )
+                {
+                    n1 = detail::count_digits( cs.begin() );
+                    BOOST_ASSERT(n1 >= 0 && n1 <= 16);
+
+                    if( n1 == 0 && *cs > '9' && *cs < '1')
+                    {
+                        // digit required
+                        return fail(cs.begin(), error::syntax);
+                    }
+
+                    num.mant = detail::parse_unsigned( 0, cs.begin(), n1 );
+
+                    cs += n1;
+
+                    // integer or floating-point with 
+                    // >= 16 leading digits
+                    if( n1 == 16 )
+                    {
+                        goto do_num2;
+                    }
+                }
+                else
+                {
+                    // 0. floating-point or 0e integer
+                    num.mant = 0;
+                    n1 = 0;
+                    ++cs;
+                }
+
+                {
+                    const char c = *cs;
+                    if(c != '.')
+                    {
+                        if((c | 32) == 'e')
+                        {
+                            ++cs;
+                            goto do_exp1;
+                        }
+                        goto finish_int;
+                    }
+                }
+
+                // floating-point number
+
+                ++cs;
+
+                int n2 = detail::count_digits( cs.begin() );
+                BOOST_ASSERT(n2 >= 0 && n2 <= 16);
+
+                if( n2 == 0 )
+                {
+                    // digit required
+                    return fail(cs.begin(), error::syntax);
+                }
+
+                // floating-point mantissa overflow
+                if( n1 + n2 >= 19 )
+                {
+                    goto do_num4;
+                }
+
+                num.mant = detail::parse_unsigned( num.mant, cs.begin(), n2 );
+
+                BOOST_ASSERT(num.bias == 0);
+
+                num.bias -= n2;
+
+                cs += n2;
+
+                char ch = *cs;
+
+                if( (ch | 32) == 'e' )
+                {
+                    ++cs;
+                    goto do_exp1;
+                }
+                else if( ch >= '0' && ch <= '9' )
+                {
+                    goto do_num8;
+                }
+
+                goto finish_dub;
+            }
+
+            //----------------------------------
+            //
+            // DIGIT
+            // first digit
+            //
+do_num1:
+            if(BOOST_JSON_LIKELY(cs))
+            {
+                char const c = *cs;
+                if(c == '0')
+                {
+                    ++cs;
+                    num.mant = 0;
+                    goto do_num6;
+                }
+                else if(BOOST_JSON_LIKELY(
+                    c >= '1' && c <= '9'))
+                {
+                    ++cs;
+                    num.mant = c - '0';
+                }
+                else
+                {
+                    return fail(cs.begin(), error::syntax);
+                }
+            }
+            else
+            {
+                if(BOOST_JSON_UNLIKELY(
+                    ! h_.on_number_part(
+                        {begin, cs.used(begin)}, ec_)))
+                    return fail(cs.begin());
+                cs = maybe_suspend(cs.begin(), state::num1, num);
+                goto *return_address;
+            }
+
+            //----------------------------------
+            //
+            // 1*DIGIT
+            // significant digits left of decimal
+            //
+do_num2:
+            if(num.neg)
+            {
+                for(;;)
+                {
+                    if(BOOST_JSON_UNLIKELY(! cs))
+                    {
+                        if(BOOST_JSON_UNLIKELY(more_))
+                        {
+                            if(BOOST_JSON_UNLIKELY(
+                                ! h_.on_number_part(
+                                    {begin, cs.used(begin)}, ec_)))
+                                return fail(cs.begin());
+                            cs = suspend(cs.begin(), state::num2, num);
+                            goto *return_address;
+                        }
+                        goto finish_int;
+                    }
+                    char const c = *cs;
+                    if(BOOST_JSON_LIKELY(
+                        c >= '0' && c <= '9'))
+                    {
+                        ++cs;
+                        //              9223372036854775808 INT64_MIN
+                        if( num.mant  > 922337203685477580 || (
+                            num.mant == 922337203685477580 && c > '8'))
+                            break;
+                        num.mant = 10 * num.mant + c - '0';
+                        continue;
+                    }
+                    goto do_num6; // [.eE]
+                }
+            }
+            else
+            {
+                for(;;)
+                {
+                    if(BOOST_JSON_UNLIKELY(! cs))
+                    {
+                        if(BOOST_JSON_UNLIKELY(more_))
+                        {
+                            if(BOOST_JSON_UNLIKELY(
+                                ! h_.on_number_part(
+                                    {begin, cs.used(begin)}, ec_)))
+                                return fail(cs.begin());
+                            cs = suspend(cs.begin(), state::num2, num);
+                            goto *return_address;
+                        }
+                        goto finish_int;
+                    }
+                    char const c = *cs;
+                    if(BOOST_JSON_LIKELY(
+                        c >= '0' && c <= '9'))
+                    {
+                        ++cs;
+                        //              18446744073709551615 UINT64_MAX
+                        if( num.mant  > 1844674407370955161 || (
+                            num.mant == 1844674407370955161 && c > '5'))
+                            break;
+                        num.mant = 10 * num.mant + c - '0';
+                    }
+                    else
+                    {
+                        goto do_num6; // [.eE]
+                    }
+                }
+            }
+            ++num.bias;
+
+            //----------------------------------
+            //
+            // 1*DIGIT
+            // non-significant digits left of decimal
+            //
+do_num3:
+            for(;;)
+            {
+                if(BOOST_JSON_UNLIKELY(! cs))
+                {
+                    if(BOOST_JSON_UNLIKELY(more_))
+                    {
+                        if(BOOST_JSON_UNLIKELY(
+                            ! h_.on_number_part(
+                                {begin, cs.used(begin)}, ec_)))
+                            return fail(cs.begin());
+                        cs = suspend(cs.begin(), state::num3, num);
+                        goto *return_address;
+                    }
+                    goto finish_dub;
+                }
+                char const c = *cs;
+                if(BOOST_JSON_UNLIKELY(
+                    c >= '0' && c <= '9'))
+                {
+                    ++cs;
+                    // VFALCO check overflow
+                    ++num.bias;
+                }
+                else if(BOOST_JSON_LIKELY(
+                    c == '.'))
+                {
+                    ++cs;
+                    break;
+                }
+                else if((c | 32) == 'e')
+                {
+                    ++cs;
+                    goto do_exp1;
+                }
+                else
+                {
+                    goto finish_dub;
+                }
+            }
+
+            //----------------------------------
+            //
+            // DIGIT
+            // first non-significant digit
+            // to the right of decimal
+            //
+do_num4:
+            {
+                if(BOOST_JSON_UNLIKELY(! cs))
+                {
+                    if(BOOST_JSON_UNLIKELY(
+                        ! h_.on_number_part(
+                            {begin, cs.used(begin)}, ec_)))
+                        return fail(cs.begin());
+                    cs = maybe_suspend(cs.begin(), state::num4, num);
+                    goto *return_address;
+                }
+                char const c = *cs;
+                if(BOOST_JSON_LIKELY(
+                    //static_cast<unsigned char>(c - '0') < 10))
+                    c >= '0' && c <= '9'))
+                {
+                    ++cs;
+                }
+                else
+                {
+                    // digit required
+                    return fail(cs.begin(), error::syntax);
+                }
+            }
+
+            //----------------------------------
+            //
+            // 1*DIGIT
+            // non-significant digits
+            // to the right of decimal
+            //
+do_num5:
+            for(;;)
+            {
+                if(BOOST_JSON_UNLIKELY(! cs))
+                {
+                    if(BOOST_JSON_UNLIKELY(more_))
+                    {
+                        if(BOOST_JSON_UNLIKELY(
+                            ! h_.on_number_part(
+                                {begin, cs.used(begin)}, ec_)))
+                            return fail(cs.begin());
+                        cs = suspend(cs.begin(), state::num5, num);
+                        goto *return_address;
+                    }
+                    goto finish_dub;
+                }
+                char const c = *cs;
+                if(BOOST_JSON_LIKELY(
+                    c >= '0' && c <= '9'))
+                {
+                    ++cs;
+                }
+                else if((c | 32) == 'e')
+                {
+                    ++cs;
+                    goto do_exp1;
+                }
+                else
+                {
+                    goto finish_dub;
+                }
+            }
+
+            //----------------------------------
+            //
+            // [.eE]
+            //
+do_num6:
+            {
+                if(BOOST_JSON_UNLIKELY(! cs))
+                {
+                    if(BOOST_JSON_UNLIKELY(more_))
+                    {
+                        if(BOOST_JSON_UNLIKELY(
+                            ! h_.on_number_part(
+                                {begin, cs.used(begin)}, ec_)))
+                            return fail(cs.begin());
+                        cs = suspend(cs.begin(), state::num6, num);
+                        goto *return_address;
+                    }
+                    goto finish_int;
+                }
+                char const c = *cs;
+                if(BOOST_JSON_LIKELY(
+                    c == '.'))
+                {
+                    ++cs;
+                }
+                else if((c | 32) == 'e')
+                {
+                    ++cs;
+                    goto do_exp1;
+                }
+                else
+                {
+                    goto finish_int;
+                }
+            }
+
+            //----------------------------------
+            //
+            // DIGIT
+            // first significant digit
+            // to the right of decimal
+            //
+do_num7:
+            {
+                if(BOOST_JSON_UNLIKELY(! cs))
+                {
+                    if(BOOST_JSON_UNLIKELY(more_))
+                    {
+                        if(BOOST_JSON_UNLIKELY(
+                            ! h_.on_number_part(
+                                {begin, cs.used(begin)}, ec_)))
+                            return fail(cs.begin());
+                        cs = suspend(cs.begin(), state::num7, num);
+                        goto *return_address;
+                    }
+                    // digit required
+                    return fail(cs.begin(), error::syntax);
+                }
+                char const c = *cs;
+                if(BOOST_JSON_UNLIKELY(
+                    c < '0' || c > '9'))
+                {
+                    // digit required
+                    return fail(cs.begin(), error::syntax);
+                }
+            }
+
+            //----------------------------------
+            //
+            // 1*DIGIT
+            // significant digits
+            // to the right of decimal
+            //
+do_num8:
+            for(;;)
+            {
+                if(BOOST_JSON_UNLIKELY(! cs))
+                {
+                    if(BOOST_JSON_UNLIKELY(more_))
+                    {
+                        if(BOOST_JSON_UNLIKELY(
+                            ! h_.on_number_part(
+                                {begin, cs.used(begin)}, ec_)))
+                            return fail(cs.begin());
+                        cs = suspend(cs.begin(), state::num8, num);
+                        goto *return_address;
+                    }
+                    goto finish_dub;
+                }
+                char const c = *cs;
+                if(BOOST_JSON_LIKELY(
+                    c >= '0' && c <= '9'))
+                {
+                    ++cs;
+                    if(BOOST_JSON_LIKELY(
+                        num.mant <= 9007199254740991)) // 2^53-1
+                    {
+                        --num.bias;
+                        num.mant = 10 * num.mant + c - '0';
+                    }
+                    else
+                    {
+                        goto do_num5;
+                    }
+                }
+                else if((c | 32) == 'e')
+                {
+                    ++cs;
+                    goto do_exp1;
+                }
+                else
+                {
+                    goto finish_dub;
+                }
+            }
+
+            //----------------------------------
+            //
+            // *[+-]
+            //
+do_exp1:
+            if(BOOST_JSON_UNLIKELY(! cs))
+            {
+                if(BOOST_JSON_UNLIKELY(
+                    ! h_.on_number_part(
+                        {begin, cs.used(begin)}, ec_)))
+                    return fail(cs.begin());
+                cs = maybe_suspend(cs.begin(), state::exp1, num);
+                goto *return_address;
+            }
+            if(*cs == '+')
+            {
+                ++cs;
+            }
+            else if(*cs == '-')
+            {
+                ++cs;
+                num.frac = true;
+            }
+
+            //----------------------------------
+            //
+            // DIGIT
+            // first digit of the exponent
+            //
+do_exp2:
+            {
+                if(BOOST_JSON_UNLIKELY(! cs))
+                {
+                    if(BOOST_JSON_UNLIKELY(more_))
+                    {
+                        if(BOOST_JSON_UNLIKELY(
+                            ! h_.on_number_part(
+                                {begin, cs.used(begin)}, ec_)))
+                            return fail(cs.begin());
+                        cs = suspend(cs.begin(), state::exp2, num);
+                        goto *return_address;
+                    }
+                    // digit required
+                   return fail(cs.begin(), error::syntax);
+                }
+                char const c = *cs;
+                if(BOOST_JSON_UNLIKELY(
+                    c < '0' || c > '9'))
+                {
+                    // digit required
+                    return fail(cs.begin(), error::syntax);
+                }
+                ++cs;
+                num.exp = c - '0';
+            }
+
+            //----------------------------------
+            //
+            // 1*DIGIT
+            // subsequent digits in the exponent
+            //
+do_exp3:
+            for(;;)
+            {
+                if(BOOST_JSON_UNLIKELY(! cs))
+                {
+                    if(BOOST_JSON_UNLIKELY(more_))
+                    {
+                        if(BOOST_JSON_UNLIKELY(
+                            ! h_.on_number_part(
+                                {begin, cs.used(begin)}, ec_)))
+                            return fail(cs.begin());
+                        cs = suspend(cs.begin(), state::exp3, num);
+                        goto *return_address;
+                    }
+                    goto finish_dub;
+                }
+                char const c = *cs;
+                if(BOOST_JSON_LIKELY(
+                    c >= '0' && c <= '9'))
+                {
+                    if(BOOST_JSON_UNLIKELY
+                    //              2147483647 INT_MAX
+                        (num.exp  > 214748364 || (
+                            num.exp == 214748364 && c > '7')))
+                        return fail(cs.begin(), error::exponent_overflow);
+                    ++cs;
+                    num.exp = 10 * num.exp + c - '0';
+                    continue;
+                }
+                goto finish_dub;
+            }
+
+finish_int:
+            if(num.neg)
+            {
+                if(BOOST_JSON_UNLIKELY(
+                    ! h_.on_int64(static_cast<
+                        int64_t>(~num.mant + 1), {begin, cs.used(begin)}, ec_)))
+                    return fail(cs.begin());
+                goto *return_address;
+            }
+            if(num.mant <= INT64_MAX)
+            {
+                if(BOOST_JSON_UNLIKELY(
+                    ! h_.on_int64(static_cast<
+                        int64_t>(num.mant), {begin, cs.used(begin)}, ec_)))
+                    return fail(cs.begin());
+                goto *return_address;
+            }
+            if(BOOST_JSON_UNLIKELY(
+                ! h_.on_uint64(num.mant, {begin, cs.used(begin)}, ec_)))
+                return fail(cs.begin());
+            goto *return_address;
+finish_dub:
+            double const d = detail::dec_to_float(
+                num.mant,
+                num.bias + (num.frac ?
+                    -num.exp : num.exp),
+                num.neg);
+            if(BOOST_JSON_UNLIKELY(
+                ! h_.on_double(d, {begin, cs.used(begin)}, ec_)))
+                return fail(cs.begin());
+            goto *return_address;
+        }
         //-------------------
         // parse true
         //-------------------
@@ -606,31 +1192,40 @@ parse_value(const char* p)
                     ! h_.on_bool(true, ec_)))
                     return fail(cs.begin());
                 cs += 4;
-                return cs.begin();
+                goto *return_address;
             }
             ++cs;
 do_tru1:
             if(BOOST_JSON_UNLIKELY(! cs))
-                return maybe_suspend(cs.begin(), state::tru1);
+            {
+                cs = maybe_suspend(cs.begin(), state::tru1);
+                goto *return_address;
+            }
             if(BOOST_JSON_UNLIKELY(*cs != 'r'))
                 return fail(cs.begin(), error::syntax);
             ++cs;
 do_tru2:
             if(BOOST_JSON_UNLIKELY(! cs))
-                return maybe_suspend(cs.begin(), state::tru2);
+            {
+                cs = maybe_suspend(cs.begin(), state::tru2);
+                goto *return_address;
+            }
             if(BOOST_JSON_UNLIKELY(*cs != 'u'))
                 return fail(cs.begin(), error::syntax);
             ++cs;
 do_tru3:
             if(BOOST_JSON_UNLIKELY(! cs))
-                return maybe_suspend(cs.begin(), state::tru3);
+            {
+                cs = maybe_suspend(cs.begin(), state::tru3);
+                goto *return_address;
+            }
             if(BOOST_JSON_UNLIKELY(*cs != 'e'))
                 return fail(cs.begin(), error::syntax);
             if(BOOST_JSON_UNLIKELY(
                 ! h_.on_bool(true, ec_)))
                 return fail(cs.begin());
             ++cs;
-            return cs.begin();
+            goto *return_address;
         }
         //-------------------
         // parse false
@@ -646,37 +1241,49 @@ do_tru3:
                     ! h_.on_bool(false, ec_)))
                     return fail(cs.begin());
                 cs += 5;
-                return cs.begin();
+                goto *return_address;
             }
             ++cs;
 do_fal1:
             if(BOOST_JSON_UNLIKELY(! cs))
-                return maybe_suspend(cs.begin(), state::fal1);
+            {
+                cs = maybe_suspend(cs.begin(), state::fal1);
+                goto *return_address;
+            }
             if(BOOST_JSON_UNLIKELY(*cs != 'a'))
                 return fail(cs.begin(), error::syntax);
             ++cs;
 do_fal2:
             if(BOOST_JSON_UNLIKELY(! cs))
-                return maybe_suspend(cs.begin(), state::fal2);
+            {
+                cs = maybe_suspend(cs.begin(), state::fal2);
+                goto *return_address;
+            }
             if(BOOST_JSON_UNLIKELY(*cs != 'l'))
                 return fail(cs.begin(), error::syntax);
             ++cs;
 do_fal3:
             if(BOOST_JSON_UNLIKELY(! cs))
-                return maybe_suspend(cs.begin(), state::fal3);
+            {
+                cs = maybe_suspend(cs.begin(), state::fal3);
+                goto *return_address;
+            }
             if(BOOST_JSON_UNLIKELY(*cs != 's'))
                 return fail(cs.begin(), error::syntax);
             ++cs;
 do_fal4:
             if(BOOST_JSON_UNLIKELY(! cs))
-                return maybe_suspend(cs.begin(), state::fal4);
+            {
+                cs = maybe_suspend(cs.begin(), state::fal4);
+                goto *return_address;
+            }
             if(BOOST_JSON_UNLIKELY(*cs != 'e'))
                 return fail(cs.begin(), error::syntax);
             if(BOOST_JSON_UNLIKELY(
                 ! h_.on_bool(false, ec_)))
                 return fail(cs.begin());
             ++cs;
-            return cs.begin();
+            goto *return_address;
         }
         //-------------------
         // parse null
@@ -692,44 +1299,185 @@ do_fal4:
                     ! h_.on_null(ec_)))
                     return fail(cs.begin());
                 cs += 4;
-                return cs.begin();
+                goto *return_address;
             }
             ++cs;
 do_nul1:
             if(BOOST_JSON_UNLIKELY(! cs))
-                return maybe_suspend(cs.begin(), state::nul1);
+            {
+                cs = maybe_suspend(cs.begin(), state::nul1);
+                goto *return_address;
+            }
             if(BOOST_JSON_UNLIKELY(*cs != 'u'))
                 return fail(cs.begin(), error::syntax);
             ++cs;
 do_nul2:
             if(BOOST_JSON_UNLIKELY(! cs))
-                return maybe_suspend(cs.begin(), state::nul2);
+            {
+                cs = maybe_suspend(cs.begin(), state::nul2);
+                goto *return_address;
+            }
             if(BOOST_JSON_UNLIKELY(*cs != 'l'))
                 return fail(cs.begin(), error::syntax);
             ++cs;
 do_nul3:
             if(BOOST_JSON_UNLIKELY(! cs))
-                return maybe_suspend(cs.begin(), state::nul3);
+            {
+                cs = maybe_suspend(cs.begin(), state::nul3);
+                goto *return_address;
+            }
             if(BOOST_JSON_UNLIKELY(*cs != 'l'))
                 return fail(cs.begin(), error::syntax);
             if(BOOST_JSON_UNLIKELY(
                 ! h_.on_null(ec_)))
                 return fail(cs.begin());
             ++cs;
-            return cs.begin();
+            goto *return_address;
         }
         //-------------------
         // parse string
         //-------------------
         case '"':
         {
-           return parse_unescaped<true, false, AllowBadUTF8>(p);
+do_str0:
+            ++cs;
+            str = 0;
+do_str1:
+            char const* start = cs.begin();
+            cs = detail::count_valid<AllowBadUTF8>(
+                cs.begin(), cs.end());
+            std::size_t size = cs.used(start);
+            if(is_key)
+            {
+                BOOST_ASSERT(str <= Handler::max_key_size);
+                if(BOOST_JSON_UNLIKELY(size > 
+                    Handler::max_key_size - str))
+                    return fail(cs.begin(), 
+                        error::key_too_large);
+            }
+            else
+            {
+                BOOST_ASSERT(str <= Handler::max_string_size);
+                if(BOOST_JSON_UNLIKELY(size > 
+                    Handler::max_string_size - str))
+                    return fail(cs.begin(), 
+                        error::string_too_large);
+            }
+            str += size;
+            if(BOOST_JSON_UNLIKELY(! cs))
+            {
+                // call handler if the string isn't empty
+                if(BOOST_JSON_LIKELY(size))
+                {
+                    if(is_key)
+                    {
+                        if(BOOST_JSON_UNLIKELY(! h_.on_key_part(
+                            {start, size}, str, ec_)))
+                            return fail(cs.begin());
+                    }
+                    else
+                    {
+                        if(BOOST_JSON_UNLIKELY(! h_.on_string_part(
+                            {start, size}, str, ec_)))
+                            return fail(cs.begin());
+                    }
+                }
+                cs = maybe_suspend(cs.begin(), state::str1, str);
+                goto *return_address;
+            }
+            if(BOOST_JSON_UNLIKELY(*cs != '\x22')) // '"'
+            {
+                // sequence is invalid or incomplete
+                if(! AllowBadUTF8 && (*cs & 0x80))
+                {
+                    seq_.save(cs.begin(), cs.remain());
+                    if(BOOST_JSON_UNLIKELY(seq_.complete()))
+                        return fail(cs.begin(), error::syntax); 
+                    if(BOOST_JSON_LIKELY(size))
+                    {
+                        if(is_key)
+                        {
+                            if(BOOST_JSON_UNLIKELY(! h_.on_key_part(
+                                {start, size}, str, ec_)))
+                                return fail(cs.begin());
+                        }
+                        else
+                        {
+                            if(BOOST_JSON_UNLIKELY(! h_.on_string_part(
+                                {start, size}, str, ec_)))
+                                return fail(cs.begin());
+                        }
+                    }
+                    cs = maybe_suspend(cs.end(), state::str8, str);
+                    goto *return_address;
+                }
+                else if(BOOST_JSON_LIKELY(*cs == '\\'))
+                {
+                    // flush unescaped run from input
+                    if(BOOST_JSON_LIKELY(size))
+                    {
+                        if(is_key)
+                        {
+                            if(BOOST_JSON_UNLIKELY(! h_.on_key_part(
+                                {start, size}, str, ec_)))
+                                return fail(cs.begin());
+                        }
+                        else
+                        {
+                            if(BOOST_JSON_UNLIKELY(! h_.on_string_part(
+                                {start, size}, str, ec_)))
+                                return fail(cs.begin());
+                        }
+                    }
+                    if(is_key)
+                    {
+                        cs = parse_escaped<StackEmpty, true,
+                            AllowBadUTF8>(cs.begin(), str);
+                    }
+                    else
+                    {
+                        cs = parse_escaped<StackEmpty, false,
+                            AllowBadUTF8>(cs.begin(), str);
+                    }
+                    goto *return_address;
+                }
+                // illegal control
+                return fail(cs.begin(), error::syntax);
+            }
+            if(is_key)
+            {
+                if(BOOST_JSON_UNLIKELY(! h_.on_key(
+                    {start, size}, str, ec_)))
+                    return fail(cs.begin());
+            }
+            else
+            {
+                if(BOOST_JSON_UNLIKELY(! h_.on_string(
+                    {start, size}, str, ec_)))
+                    return fail(cs.begin());
+            }
+            ++cs;
+            goto *return_address;
         }
         //-------------------
         // parse array
         //-------------------
         case '[':
         {
+            __asm__ __volatile__
+            (
+                "subq $240, %%rsp\t\n"
+                "movq %0, %%rax\t\n"
+                "movq %%rax, (%%rsp)\t\n"
+                "subq $8, %%rsp\t\n"
+                "movq %1, %%rax\t\n"
+                "movq %%rax, (%%rsp)\t\n"
+                "subq $8, %%rsp"
+                :
+                : "rm" (return_address), "rm" (total)
+                : "rsp", "rax", "memory", "cc"
+            );
+            return_address = &&elem_arr;
             total = 0;
             if(BOOST_JSON_UNLIKELY(! depth_))
                 return fail(cs.begin(), error::too_deep);
@@ -744,7 +1492,10 @@ do_nul3:
 do_arr1:
             cs = detail::count_whitespace(cs.begin(), cs.end());
             if(BOOST_JSON_UNLIKELY(! cs))
-                return maybe_suspend(cs.begin(), state::arr1, total);
+            {
+                cs = maybe_suspend(cs.begin(), state::arr1, total);
+                goto finish_array;
+            }
             if(BOOST_JSON_LIKELY(*cs != ']'))
             {
                 if(AllowComments && *cs == '/')
@@ -762,21 +1513,30 @@ loop_arr:
                     return fail(cs.begin(), error::array_too_large);
 do_arr3:
                 // array is not empty, value required
-                cs = parse_value<StackEmpty, AllowComments, 
-                    AllowTrailing, AllowBadUTF8>(cs.begin());
+                goto do_val1;
+elem_arr:
                 if(BOOST_JSON_UNLIKELY(incomplete(cs)))
-                    return suspend_or_fail(state::arr3, total);
+                {
+                    cs = maybe_suspend(cs.begin(), state::arr3, total);
+                    goto finish_array;
+                }
 do_arr4:
                 cs = detail::count_whitespace(cs.begin(), cs.end());
                 if(BOOST_JSON_UNLIKELY(! cs))
-                    return maybe_suspend(cs.begin(), state::arr4, total);
+                {
+                    cs = maybe_suspend(cs.begin(), state::arr4, total);
+                    goto finish_array;
+                }
                 if(BOOST_JSON_LIKELY(*cs == ','))
                 {
                     ++cs;
 do_arr5:
                     cs = detail::count_whitespace(cs.begin(), cs.end());
                     if(BOOST_JSON_UNLIKELY(! cs))
-                        return maybe_suspend(cs.begin(), state::arr5, total);
+                    {
+                        cs = maybe_suspend(cs.begin(), state::arr5, total);
+                        goto finish_array;
+                    }
                     if(AllowComments && *cs == '/')
                     {
 do_arr6:
@@ -810,13 +1570,40 @@ do_arr7:
                 return fail(cs.begin());
             ++depth_;
             ++cs;
-            return cs.begin();
+finish_array:
+            __asm__ volatile
+            (
+                "addq $8, %%rsp\t\n"
+                "movq (%%rsp), %%rax\t\n"
+                "movq %%rax, %1\t\n"
+                "addq $8, %%rsp\t\n"
+                "movq (%%rsp), %%rax\t\n"
+                "movq %%rax, %0\t\n"
+                "addq $240, %%rsp\t\n"
+                : "=rm" (return_address), "=rm" (total)
+                :
+                : "rsp", "rax"
+            );
+            goto *return_address;
         }
         //-------------------
         // parse object
         //-------------------
         case '{':
         {
+            __asm__ __volatile__
+            (
+                "subq $240, %%rsp\t\n"
+                "movq %0, %%rax\t\n"
+                "movq %%rax, (%%rsp)\t\n"
+                "subq $8, %%rsp\t\n"
+                "movq %1, %%rax\t\n"
+                "movq %%rax, (%%rsp)\t\n"
+                "subq $8, %%rsp"
+                :
+                : "rm" (return_address), "rm" (total)
+                : "rsp", "rax", "memory", "cc"
+            );
             total = 0;
             if(BOOST_JSON_UNLIKELY(! depth_))
                 return fail(cs.begin(), error::too_deep);
@@ -831,7 +1618,10 @@ do_arr7:
 do_obj1:
             cs = detail::count_whitespace(cs.begin(), cs.end());
             if(BOOST_JSON_UNLIKELY(! cs))
-                return maybe_suspend(cs.begin(), state::obj1, total);
+            {
+                cs = maybe_suspend(cs.begin(), state::obj1, total);
+                goto finish_object;
+            }
             if(BOOST_JSON_LIKELY(*cs != '}'))
             {
                 if(BOOST_JSON_UNLIKELY(*cs != '\x22'))
@@ -851,15 +1641,24 @@ loop_obj:
                 if(BOOST_JSON_UNLIKELY(++total > 
                     Handler::max_object_size))
                     return fail(cs.begin(), error::object_too_large);
+                is_key = true;
 do_obj3:
-                cs = parse_string<StackEmpty, true,
-                    AllowBadUTF8>(cs.begin());
+                return_address = &&elem_key;
+                goto do_str0;
+elem_key:
                 if(BOOST_JSON_UNLIKELY(incomplete(cs)))
-                    return suspend_or_fail(state::obj3, total);
+                {
+                    cs = maybe_suspend(cs.begin(), state::obj3, total);
+                    goto finish_object;
+                }
+                is_key = false;
 do_obj4:
                 cs = detail::count_whitespace(cs.begin(), cs.end());
                 if(BOOST_JSON_UNLIKELY(! cs))
-                    return maybe_suspend(cs.begin(), state::obj4, total);
+                {
+                    cs = maybe_suspend(cs.begin(), state::obj4, total);
+                    goto finish_object;
+                }
                 if(BOOST_JSON_UNLIKELY(*cs != ':'))
                 {
                     if(AllowComments && *cs == '/')
@@ -877,7 +1676,10 @@ do_obj5:
 do_obj6:
                 cs = detail::count_whitespace(cs.begin(), cs.end());
                 if(BOOST_JSON_UNLIKELY(! cs))
-                    return maybe_suspend(cs.begin(), state::obj6, total);
+                {
+                    cs = maybe_suspend(cs.begin(), state::obj6, total);
+                    goto finish_object;
+                }
                 if(AllowComments && *cs == '/')
                 {
 do_obj7:
@@ -888,21 +1690,31 @@ do_obj7:
                     goto do_obj6;
                 }
 do_obj8:
-                cs = parse_value<StackEmpty, AllowComments, 
-                    AllowTrailing, AllowBadUTF8>(cs.begin());
+                return_address = &&elem_obj;
+                goto do_val1;
+elem_obj:
                 if(BOOST_JSON_UNLIKELY(incomplete(cs)))
-                    return suspend_or_fail(state::obj8, total);
+                {
+                    cs = maybe_suspend(cs.begin(), state::obj8, total);
+                    goto finish_object;
+                }
 do_obj9:
                 cs = detail::count_whitespace(cs.begin(), cs.end());
                 if(BOOST_JSON_UNLIKELY(! cs))
-                    return maybe_suspend(cs.begin(), state::obj9, total);
+                {
+                    cs = maybe_suspend(cs.begin(), state::obj9, total);
+                    goto finish_object;
+                }
                 if(BOOST_JSON_LIKELY(*cs == ','))
                 {
                     ++cs;
 do_obj10:
                     cs = detail::count_whitespace(cs.begin(), cs.end());
                     if(BOOST_JSON_UNLIKELY(! cs))
-                        return maybe_suspend(cs.begin(), state::obj10, total);
+                    {
+                        cs = maybe_suspend(cs.begin(), state::obj10, total);
+                        goto finish_object;
+                    }
 
                     // loop for next element
                     if(BOOST_JSON_LIKELY(*cs == '\x22'))
@@ -941,9 +1753,25 @@ do_obj12:
                 return fail(cs.begin());
             ++depth_;
             ++cs;
-            return cs.begin();
+finish_object:
+            __asm__ volatile
+            (
+                "addq $8, %%rsp\t\n"
+                "movq (%%rsp), %%rax\t\n"
+                "movq %%rax, %1\t\n"
+                "addq $8, %%rsp\t\n"
+                "movq (%%rsp), %%rax\t\n"
+                "movq %%rax, %0\t\n"
+                "addq $240, %%rsp\t\n"
+                : "=rm" (return_address), "=rm" (total)
+                :
+                : "rsp", "rax"
+            );
+            goto *return_address;
         }
         }
+return_ok:
+        return cs.begin();
     }
     else
     {
@@ -995,6 +1823,9 @@ do_obj12:
         // resume string
         //-------------------
         case state::str1:
+            st_.pop<state>();
+            st_.pop(total);
+            goto do_str1;
         case state::str2:  case state::str3: 
         case state::str4:  case state::str5: 
         case state::str6:  case state::str7:
@@ -1003,7 +1834,7 @@ do_obj12:
         case state::sur3:  case state::sur4:
         case state::sur5:  case state::sur6:
             return parse_escaped<StackEmpty, 
-                false, AllowBadUTF8>(p);
+                false, AllowBadUTF8>(cs.begin());
         //-------------------
         // resume object
         //-------------------
@@ -1095,150 +1926,16 @@ do_obj12:
         case state::num7:  case state::num8:
         case state::exp1:  case state::exp2:
         case state::exp3:
-            return parse_number<StackEmpty, 0>(p);
+            //return parse_number<StackEmpty, 0>(cs.begin());
         //-------------------
         // resume comment
         //-------------------
         case state::com1:  case state::com2:
         case state::com3:  case state::com4:
         BOOST_JSON_ASSUME(AllowComments);
-            return parse_comment<StackEmpty, false>(p);
+            return parse_comment<StackEmpty, false>(cs.begin());
         }
     }
-}
-
-//----------------------------------------------------------
-
-template<class Handler>
-template<
-    bool StackEmpty,
-    bool IsKey,
-    bool AllowBadUTF8>
-const char*
-basic_parser<Handler>::
-parse_string(const char* p)
-{
-    if(! StackEmpty && ! st_.empty())
-    {
-        state st;
-        st_.peek(st);
-        switch(st)
-        {
-        default: BOOST_JSON_UNREACHABLE();
-        case state::str1:
-            return parse_unescaped<StackEmpty, 
-                IsKey, AllowBadUTF8>(p);
-
-        case state::str2: case state::str3: 
-        case state::str4: case state::str5: 
-        case state::str6: case state::str7:
-        case state::str8:
-        case state::sur1: case state::sur2:
-        case state::sur3: case state::sur4:
-        case state::sur5: case state::sur6:
-            return parse_escaped<StackEmpty, 
-                IsKey, AllowBadUTF8>(p);
-        }
-    }
-    return parse_unescaped<true, 
-        IsKey, AllowBadUTF8>(p);
-}
-
-template<class Handler>
-template<
-    bool StackEmpty,
-    bool IsKey,
-    bool AllowBadUTF8>
-const char*
-basic_parser<Handler>::
-parse_unescaped(const char* p)
-{
-    constexpr auto on_full = IsKey ? 
-        &Handler::on_key : &Handler::on_string;
-    constexpr auto on_part = IsKey ? 
-        &Handler::on_key_part : &Handler::on_string_part;
-    detail::const_stream_wrapper cs(p, end_);
-    std::size_t total;
-    if(StackEmpty || st_.empty())
-    {
-        BOOST_ASSERT(*cs == '\x22'); // '"'
-        ++cs;
-        total = 0;
-    }
-    else
-    {
-        state st;
-        st_.pop(st);
-        st_.pop(total);
-    }
-    char const* start = cs.begin();
-    cs = detail::count_valid<AllowBadUTF8>(
-        cs.begin(), cs.end());
-    std::size_t size = cs.used(start);
-    if(IsKey)
-    {
-        BOOST_ASSERT(total <= Handler::max_key_size);
-        if(BOOST_JSON_UNLIKELY(size > 
-            Handler::max_key_size - total))
-            return fail(cs.begin(), 
-                error::key_too_large);
-    }
-    else
-    {
-        BOOST_ASSERT(total <= Handler::max_string_size);
-        if(BOOST_JSON_UNLIKELY(size > 
-            Handler::max_string_size - total))
-            return fail(cs.begin(), 
-                error::string_too_large);
-    }
-    total += size;
-    if(BOOST_JSON_UNLIKELY(! cs))
-    {
-        // call handler if the string isn't empty
-        if(BOOST_JSON_LIKELY(size))
-        {
-            if(BOOST_JSON_UNLIKELY(! (h_.*on_part)(
-                {start, size}, total, ec_)))
-                return fail(cs.begin());
-        }
-        return maybe_suspend(cs.begin(), state::str1, total);
-    }
-    if(BOOST_JSON_UNLIKELY(*cs != '\x22')) // '"'
-    {
-        // sequence is invalid or incomplete
-        if(! AllowBadUTF8 && (*cs & 0x80))
-        {
-            seq_.save(cs.begin(), cs.remain());
-            if(BOOST_JSON_UNLIKELY(seq_.complete()))
-                return fail(cs.begin(), error::syntax); 
-            if(BOOST_JSON_LIKELY(size))
-            {
-                if(BOOST_JSON_UNLIKELY(! (h_.*on_part)(
-                    {start, size}, total, ec_)))
-                    return fail(cs.begin());
-            }
-            return maybe_suspend(cs.end(), state::str8, total);
-        }
-        else if(BOOST_JSON_LIKELY(*cs == '\\'))
-        {
-            // flush unescaped run from input
-            if(BOOST_JSON_LIKELY(size))
-            {
-                if(BOOST_JSON_UNLIKELY(! (h_.*on_part)(
-                    {start, size}, total, ec_)))
-                    return fail(cs.begin());
-            }
-            return parse_escaped<StackEmpty, IsKey,
-                AllowBadUTF8>(cs.begin(), total);
-        }
-        // illegal control
-        return fail(cs.begin(), error::syntax);
-    }
-    if(BOOST_JSON_UNLIKELY(! (h_.*on_full)(
-        {start, size}, total, ec_)))
-        return fail(cs.begin());
-    ++cs;
-    return cs.begin();
 }
 
 template<class Handler>
@@ -1671,627 +2368,6 @@ do_str8:
     temp.append(seq_.data(), seq_.length());
     cs += needed;
     goto do_str2;
-}
-
-//----------------------------------------------------------
-
-template<class Handler>
-template<bool StackEmpty, char First>
-const char*
-basic_parser<Handler>::
-parse_number(const char* p)
-{
-    // only one of these will be true if we are not resuming
-    // if negative then !zero_first && !nonzero_first
-    // if zero_first then !nonzero_first && !negative
-    // if nonzero_first then !zero_first && !negative
-    constexpr bool negative = First == '-';
-    constexpr bool zero_first = First == '0';
-    constexpr bool nonzero_first = First == '+';
-    detail::const_stream_wrapper cs(p, end_);
-    number num;
-    const char* begin = cs.begin();
-    if(StackEmpty || st_.empty())
-    {
-        num.bias = 0;
-        num.exp = 0;
-        num.frac = false;
-
-        //----------------------------------
-        //
-        // '-'
-        // leading minus sign
-        //
-        BOOST_ASSERT(cs);
-        if(negative)
-            ++cs;
-
-        num.neg = negative;
-        num.frac = false;
-        num.exp = 0;
-        num.bias = 0;
-
-        // fast path
-        if( cs.remain() >= 16 + 1 + 16 ) // digits . digits
-        {
-            int n1;
-
-            if( nonzero_first || 
-                (negative && *cs != '0') )
-            {
-                n1 = detail::count_digits( cs.begin() );
-                BOOST_ASSERT(n1 >= 0 && n1 <= 16);
-
-                if( ! nonzero_first && n1 == 0 )
-                {
-                    // digit required
-                    return fail(cs.begin(), error::syntax);
-                }
-
-                num.mant = detail::parse_unsigned( 0, cs.begin(), n1 );
-
-                cs += n1;
-
-                // integer or floating-point with 
-                // >= 16 leading digits
-                if( n1 == 16 )
-                {
-                    goto do_num2;
-                }
-            }
-            else
-            {
-                // 0. floating-point or 0e integer
-                num.mant = 0;
-                n1 = 0;
-                ++cs;
-            }
-
-            {
-                const char c = *cs;
-                if(c != '.')
-                {
-                    if((c | 32) == 'e')
-                    {
-                        ++cs;
-                        goto do_exp1;
-                    }
-                    if(negative)
-                        num.mant = ~num.mant + 1;
-                    goto finish_signed;
-                }
-            }
-
-            // floating-point number
-
-            ++cs;
-
-            int n2 = detail::count_digits( cs.begin() );
-            BOOST_ASSERT(n2 >= 0 && n2 <= 16);
-
-            if( n2 == 0 )
-            {
-                // digit required
-                return fail(cs.begin(), error::syntax);
-            }
-
-            // floating-point mantissa overflow
-            if( n1 + n2 >= 19 )
-            {
-                goto do_num4;
-            }
-
-            num.mant = detail::parse_unsigned( num.mant, cs.begin(), n2 );
-
-            BOOST_ASSERT(num.bias == 0);
-
-            num.bias -= n2;
-
-            cs += n2;
-
-            char ch = *cs;
-
-            if( (ch | 32) == 'e' )
-            {
-                ++cs;
-                goto do_exp1;
-            }
-            else if( ch >= '0' && ch <= '9' )
-            {
-                goto do_num8;
-            }
-
-            goto finish_dub;
-        }
-    }
-    else
-    {
-        num = num_;
-        state st;
-        st_.pop(st);
-        switch(st)
-        {
-        default: BOOST_JSON_UNREACHABLE();
-        case state::num1: goto do_num1;
-        case state::num2: goto do_num2;
-        case state::num3: goto do_num3;
-        case state::num4: goto do_num4;
-        case state::num5: goto do_num5;
-        case state::num6: goto do_num6;
-        case state::num7: goto do_num7;
-        case state::num8: goto do_num8;
-        case state::exp1: goto do_exp1;
-        case state::exp2: goto do_exp2;
-        case state::exp3: goto do_exp3;
-        }
-    }
-
-    //----------------------------------
-    //
-    // DIGIT
-    // first digit
-    //
-do_num1:
-    if(zero_first || nonzero_first ||
-        BOOST_JSON_LIKELY(cs))
-    {
-        char const c = *cs;
-        if(zero_first)
-        {
-            ++cs;
-            num.mant = 0;
-            goto do_num6;
-        }
-        else if(nonzero_first || BOOST_JSON_LIKELY(
-            c >= '1' && c <= '9'))
-        {
-            ++cs;
-            num.mant = c - '0';
-        }
-        else if(BOOST_JSON_UNLIKELY(
-            c == '0'))
-        {
-            ++cs;
-            num.mant = 0;
-            goto do_num6;
-        }
-        else
-        {
-            return fail(cs.begin(), error::syntax);
-        }
-    }
-    else
-    {
-        if(BOOST_JSON_UNLIKELY(
-            ! h_.on_number_part(
-                {begin, cs.used(begin)}, ec_)))
-            return fail(cs.begin());
-        return maybe_suspend(
-            cs.begin(), state::num1, num);
-    }
-
-    //----------------------------------
-    //
-    // 1*DIGIT
-    // significant digits left of decimal
-    //
-do_num2:
-    if(negative || (!StackEmpty && num.neg))
-    {
-        for(;;)
-        {
-            if(BOOST_JSON_UNLIKELY(! cs))
-            {
-                if(BOOST_JSON_UNLIKELY(more_))
-                {
-                    if(BOOST_JSON_UNLIKELY(
-                        ! h_.on_number_part(
-                            {begin, cs.used(begin)}, ec_)))
-                        return fail(cs.begin());
-                    return suspend(cs.begin(), state::num2, num);
-                }
-                goto finish_int;
-            }
-            char const c = *cs;
-            if(BOOST_JSON_LIKELY(
-                c >= '0' && c <= '9'))
-            {
-                ++cs;
-                //              9223372036854775808 INT64_MIN
-                if( num.mant  > 922337203685477580 || (
-                    num.mant == 922337203685477580 && c > '8'))
-                    break;
-                num.mant = 10 * num.mant + c - '0';
-                continue;
-            }
-            goto do_num6; // [.eE]
-        }
-    }
-    else
-    {
-        for(;;)
-        {
-            if(BOOST_JSON_UNLIKELY(! cs))
-            {
-                if(BOOST_JSON_UNLIKELY(more_))
-                {
-                    if(BOOST_JSON_UNLIKELY(
-                        ! h_.on_number_part(
-                            {begin, cs.used(begin)}, ec_)))
-                        return fail(cs.begin());
-                    return suspend(cs.begin(), state::num2, num);
-                }
-                goto finish_int;
-            }
-            char const c = *cs;
-            if(BOOST_JSON_LIKELY(
-                c >= '0' && c <= '9'))
-            {
-                ++cs;
-                //              18446744073709551615 UINT64_MAX
-                if( num.mant  > 1844674407370955161 || (
-                    num.mant == 1844674407370955161 && c > '5'))
-                    break;
-                num.mant = 10 * num.mant + c - '0';
-            }
-            else
-            {
-                goto do_num6; // [.eE]
-            }
-        }
-    }
-    ++num.bias;
-
-    //----------------------------------
-    //
-    // 1*DIGIT
-    // non-significant digits left of decimal
-    //
-do_num3:
-    for(;;)
-    {
-        if(BOOST_JSON_UNLIKELY(! cs))
-        {
-            if(BOOST_JSON_UNLIKELY(more_))
-            {
-                if(BOOST_JSON_UNLIKELY(
-                    ! h_.on_number_part(
-                        {begin, cs.used(begin)}, ec_)))
-                    return fail(cs.begin());
-                return suspend(cs.begin(), state::num3, num);
-            }
-            goto finish_dub;
-        }
-        char const c = *cs;
-        if(BOOST_JSON_UNLIKELY(
-            c >= '0' && c <= '9'))
-        {
-            ++cs;
-            // VFALCO check overflow
-            ++num.bias;
-        }
-        else if(BOOST_JSON_LIKELY(
-            c == '.'))
-        {
-            ++cs;
-            break;
-        }
-        else if((c | 32) == 'e')
-        {
-            ++cs;
-            goto do_exp1;
-        }
-        else
-        {
-            goto finish_dub;
-        }
-    }
-
-    //----------------------------------
-    //
-    // DIGIT
-    // first non-significant digit
-    // to the right of decimal
-    //
-do_num4:
-    {
-        if(BOOST_JSON_UNLIKELY(! cs))
-        {
-            if(BOOST_JSON_UNLIKELY(
-                ! h_.on_number_part(
-                    {begin, cs.used(begin)}, ec_)))
-                return fail(cs.begin());
-            return maybe_suspend(
-                cs.begin(), state::num4, num);
-        }
-        char const c = *cs;
-        if(BOOST_JSON_LIKELY(
-            //static_cast<unsigned char>(c - '0') < 10))
-            c >= '0' && c <= '9'))
-        {
-            ++cs;
-        }
-        else
-        {
-            // digit required
-            return fail(cs.begin(), error::syntax);
-        }
-    }
-
-    //----------------------------------
-    //
-    // 1*DIGIT
-    // non-significant digits
-    // to the right of decimal
-    //
-do_num5:
-    for(;;)
-    {
-        if(BOOST_JSON_UNLIKELY(! cs))
-        {
-            if(BOOST_JSON_UNLIKELY(more_))
-            {
-                if(BOOST_JSON_UNLIKELY(
-                    ! h_.on_number_part(
-                        {begin, cs.used(begin)}, ec_)))
-                    return fail(cs.begin());
-                return suspend(cs.begin(), state::num5, num);
-            }
-            goto finish_dub;
-        }
-        char const c = *cs;
-        if(BOOST_JSON_LIKELY(
-            c >= '0' && c <= '9'))
-        {
-            ++cs;
-        }
-        else if((c | 32) == 'e')
-        {
-            ++cs;
-            goto do_exp1;
-        }
-        else
-        {
-            goto finish_dub;
-        }
-    }
-
-    //----------------------------------
-    //
-    // [.eE]
-    //
-do_num6:
-    {
-        if(BOOST_JSON_UNLIKELY(! cs))
-        {
-            if(BOOST_JSON_UNLIKELY(more_))
-            {
-                if(BOOST_JSON_UNLIKELY(
-                    ! h_.on_number_part(
-                        {begin, cs.used(begin)}, ec_)))
-                    return fail(cs.begin());
-                return suspend(cs.begin(), state::num6, num);
-            }
-            goto finish_int;
-        }
-        char const c = *cs;
-        if(BOOST_JSON_LIKELY(
-            c == '.'))
-        {
-            ++cs;
-        }
-        else if((c | 32) == 'e')
-        {
-            ++cs;
-            goto do_exp1;
-        }
-        else
-        {
-            goto finish_int;
-        }
-    }
-
-    //----------------------------------
-    //
-    // DIGIT
-    // first significant digit
-    // to the right of decimal
-    //
-do_num7:
-    {
-        if(BOOST_JSON_UNLIKELY(! cs))
-        {
-            if(BOOST_JSON_UNLIKELY(more_))
-            {
-                if(BOOST_JSON_UNLIKELY(
-                    ! h_.on_number_part(
-                        {begin, cs.used(begin)}, ec_)))
-                    return fail(cs.begin());
-                return suspend(cs.begin(), state::num7, num);
-            }
-            // digit required
-            return fail(cs.begin(), error::syntax);
-        }
-        char const c = *cs;
-        if(BOOST_JSON_UNLIKELY(
-            c < '0' || c > '9'))
-        {
-            // digit required
-            return fail(cs.begin(), error::syntax);
-        }
-    }
-
-    //----------------------------------
-    //
-    // 1*DIGIT
-    // significant digits
-    // to the right of decimal
-    //
-do_num8:
-    for(;;)
-    {
-        if(BOOST_JSON_UNLIKELY(! cs))
-        {
-            if(BOOST_JSON_UNLIKELY(more_))
-            {
-                if(BOOST_JSON_UNLIKELY(
-                    ! h_.on_number_part(
-                        {begin, cs.used(begin)}, ec_)))
-                    return fail(cs.begin());
-                return suspend(cs.begin(), state::num8, num);
-            }
-            goto finish_dub;
-        }
-        char const c = *cs;
-        if(BOOST_JSON_LIKELY(
-            c >= '0' && c <= '9'))
-        {
-            ++cs;
-            if(BOOST_JSON_LIKELY(
-                num.mant <= 9007199254740991)) // 2^53-1
-            {
-                --num.bias;
-                num.mant = 10 * num.mant + c - '0';
-            }
-            else
-            {
-                goto do_num5;
-            }
-        }
-        else if((c | 32) == 'e')
-        {
-            ++cs;
-            goto do_exp1;
-        }
-        else
-        {
-            goto finish_dub;
-        }
-    }
-
-    //----------------------------------
-    //
-    // *[+-]
-    //
-do_exp1:
-    if(BOOST_JSON_UNLIKELY(! cs))
-    {
-        if(BOOST_JSON_UNLIKELY(
-            ! h_.on_number_part(
-                {begin, cs.used(begin)}, ec_)))
-            return fail(cs.begin());
-        return maybe_suspend(
-            cs.begin(), state::exp1, num);
-    }
-    if(*cs == '+')
-    {
-        ++cs;
-    }
-    else if(*cs == '-')
-    {
-        ++cs;
-        num.frac = true;
-    }
-
-    //----------------------------------
-    //
-    // DIGIT
-    // first digit of the exponent
-    //
-do_exp2:
-    {
-        if(BOOST_JSON_UNLIKELY(! cs))
-        {
-            if(BOOST_JSON_UNLIKELY(more_))
-            {
-                if(BOOST_JSON_UNLIKELY(
-                    ! h_.on_number_part(
-                        {begin, cs.used(begin)}, ec_)))
-                    return fail(cs.begin());
-                return suspend(cs.begin(), state::exp2, num);
-            }
-            // digit required
-           return fail(cs.begin(), error::syntax);
-        }
-        char const c = *cs;
-        if(BOOST_JSON_UNLIKELY(
-            c < '0' || c > '9'))
-        {
-            // digit required
-            return fail(cs.begin(), error::syntax);
-        }
-        ++cs;
-        num.exp = c - '0';
-    }
-
-    //----------------------------------
-    //
-    // 1*DIGIT
-    // subsequent digits in the exponent
-    //
-do_exp3:
-    for(;;)
-    {
-        if(BOOST_JSON_UNLIKELY(! cs))
-        {
-            if(BOOST_JSON_UNLIKELY(more_))
-            {
-                if(BOOST_JSON_UNLIKELY(
-                    ! h_.on_number_part(
-                        {begin, cs.used(begin)}, ec_)))
-                    return fail(cs.begin());
-                return suspend(cs.begin(), state::exp3, num);
-            }
-            goto finish_dub;
-        }
-        char const c = *cs;
-        if(BOOST_JSON_LIKELY(
-            c >= '0' && c <= '9'))
-        {
-            if(BOOST_JSON_UNLIKELY
-            //              2147483647 INT_MAX
-                (num.exp  > 214748364 || (
-                    num.exp == 214748364 && c > '7')))
-                return fail(cs.begin(), error::exponent_overflow);
-            ++cs;
-            num.exp = 10 * num.exp + c - '0';
-            continue;
-        }
-        goto finish_dub;
-    }
-
-finish_int:
-    if(negative || (!StackEmpty && num.neg))
-    {
-        if(BOOST_JSON_UNLIKELY(
-            ! h_.on_int64(static_cast<
-                int64_t>(~num.mant + 1), {begin, cs.used(begin)}, ec_)))
-            return fail(cs.begin());
-        return cs.begin();
-    }
-    if(num.mant <= INT64_MAX)
-    {
-finish_signed:
-        if(BOOST_JSON_UNLIKELY(
-            ! h_.on_int64(static_cast<
-                int64_t>(num.mant), {begin, cs.used(begin)}, ec_)))
-            return fail(cs.begin());
-        return cs.begin();
-    }
-    if(BOOST_JSON_UNLIKELY(
-        ! h_.on_uint64(num.mant, {begin, cs.used(begin)}, ec_)))
-        return fail(cs.begin());
-    return cs.begin();
-finish_dub:
-    double const d = detail::dec_to_float(
-        num.mant,
-        num.bias + (num.frac ?
-            -num.exp : num.exp),
-        num.neg);
-    if(BOOST_JSON_UNLIKELY(
-        ! h_.on_double(d, {begin, cs.used(begin)}, ec_)))
-        return fail(cs.begin());
-    return cs.begin();
 }
 
 //----------------------------------------------------------

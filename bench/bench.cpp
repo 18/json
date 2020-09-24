@@ -7,7 +7,9 @@
 // Official repository: https://github.com/cppalliance/json
 //
 
+//#define BOOST_JSON_STANDALONE
 #include <boost/json/detail/config.hpp>
+//#include <boost/json/src.hpp>
 
 #if defined(BOOST_JSON_USE_SSE2)
 #  define RAPIDJSON_SSE2

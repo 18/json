@@ -404,21 +404,6 @@ class basic_parser
 
     template<bool StackEmpty, bool IsKey,
         bool AllowBadUTF8>
-    BOOST_FORCEINLINE
-    const char* parse_string(const char* p);
-    
-    template<bool StackEmpty, char First>
-    BOOST_FORCEINLINE
-    const char* parse_number(const char* p);
-    
-    template<bool StackEmpty, bool IsKey,
-        bool AllowBadUTF8>
-    BOOST_FORCEINLINE
-    const char* parse_unescaped(const char* p);
-
-    template<bool StackEmpty, bool IsKey,
-        bool AllowBadUTF8>
-    BOOST_FORCEINLINE
     const char* parse_escaped(
         const char* p, 
         std::size_t total = 0);
